@@ -26,6 +26,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusBarText = document.getElementById('status-bar-text');
   const executionLogList = document.getElementById('execution-log-list');
   const configPanel = document.getElementById('config-panel');
+  const updateModal = document.getElementById('update-modal');
+  const updateModalClose = document.getElementById('update-modal-close');
+  const updateModalConfirm = document.getElementById('update-modal-confirm');
+  const updateModalMessage = document.getElementById('update-modal-message');
 
   // --- État du dessin ---
   let isDrawing = false;
@@ -109,6 +113,26 @@ document.addEventListener('DOMContentLoaded', () => {
       logs.unshift(entry);
       chrome.storage.local.set({ [EXECUTION_LOG_KEY]: logs.slice(0, MAX_EXECUTION_LOGS) });
     });
+  }
+
+  /**
+   * Ouvre la modale d'information de mise à jour
+   * @param {string} message
+   */
+  function ouvrirModaleMiseAJour(message) {
+    if (!updateModal || !updateModalMessage) return;
+    updateModalMessage.textContent = message;
+    updateModal.classList.add('open');
+    updateModal.setAttribute('aria-hidden', 'false');
+  }
+
+  /**
+   * Ferme la modale de mise à jour
+   */
+  function fermerModaleMiseAJour() {
+    if (!updateModal) return;
+    updateModal.classList.remove('open');
+    updateModal.setAttribute('aria-hidden', 'true');
   }
 
   /**
@@ -363,6 +387,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  if (updateModalClose) {
+    updateModalClose.addEventListener('click', fermerModaleMiseAJour);
+  }
+
+  if (updateModalConfirm) {
+    updateModalConfirm.addEventListener('click', fermerModaleMiseAJour);
+  }
+
+  if (updateModal) {
+    updateModal.addEventListener('click', (e) => {
+      if (e.target === updateModal) {
+        fermerModaleMiseAJour();
+      }
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && updateModal && updateModal.classList.contains('open')) {
+      fermerModaleMiseAJour();
+    }
+  });
+
   // =============================================
   // BOUTON SAUVEGARDER
   // =============================================
@@ -442,6 +488,16 @@ document.addEventListener('DOMContentLoaded', () => {
           appendExecutionLog('Pointage', 'Erreur de communication avec le service worker', 'error');
           console.error('Erreur:', chrome.runtime.lastError);
           return;
+        }
+
+        // Afficher un popup à chaque pointage si l'extension n'est pas à jour
+        if (response && response.outdated) {
+          const latest = response.latestVersion || 'inconnue';
+          const current = response.currentVersion || 'inconnue';
+          ouvrirModaleMiseAJour(
+            `Votre extension n'est pas à jour.\n\nVersion installee: ${current}\nDerniere version: ${latest}\n\nVeuillez telecharger la derniere version sur GitHub.`
+          );
+          appendExecutionLog('Mise à jour', `Extension obsolète détectée (${current} -> ${latest})`, 'error');
         }
 
         if (response && response.success) {
