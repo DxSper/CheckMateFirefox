@@ -13,7 +13,11 @@
 
 body {
   width: 380px;
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family:
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    sans-serif;
   background: linear-gradient(145deg, #0c0e1a 0%, #141829 50%, #0f1221 100%);
   color: #c8d6e5;
   overflow-x: hidden;
@@ -82,7 +86,7 @@ body {
   border-color: rgba(255, 255, 255, 0.18);
 }
 
-.compact-toggle[aria-pressed='true'] {
+.compact-toggle[aria-pressed="true"] {
   color: #c4b5fd;
   border-color: rgba(168, 85, 247, 0.5);
   background: rgba(168, 85, 247, 0.15);
@@ -464,10 +468,10 @@ body {
 }
 
 .btn::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(rgba(255,255,255,0.1), transparent);
+  background: linear-gradient(rgba(255, 255, 255, 0.1), transparent);
   opacity: 0;
   transition: opacity 0.2s ease;
 }
@@ -504,7 +508,9 @@ body {
   border-color: rgba(239, 68, 68, 0.2);
 }
 
-.btn-clear::after { display: none; }
+.btn-clear::after {
+  display: none;
+}
 
 /* -- Save button -- */
 
@@ -557,7 +563,9 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-.btn-start:disabled::after { display: none; }
+.btn-start:disabled::after {
+  display: none;
+}
 
 .btn-start.loading {
   background: linear-gradient(135deg, #6c5ce7 0%, #a855f7 100%);
@@ -567,7 +575,9 @@ body {
 
 /* Spinner animation for loading state */
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinner {
@@ -576,9 +586,21 @@ body {
 
 /* Subtle pulse on the CTA when ready */
 @keyframes pulse-ring {
-  0% { box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3), 0 0 0 0 rgba(108, 92, 231, 0.25); }
-  70% { box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3), 0 0 0 8px rgba(108, 92, 231, 0); }
-  100% { box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3), 0 0 0 0 rgba(108, 92, 231, 0); }
+  0% {
+    box-shadow:
+      0 4px 15px rgba(108, 92, 231, 0.3),
+      0 0 0 0 rgba(108, 92, 231, 0.25);
+  }
+  70% {
+    box-shadow:
+      0 4px 15px rgba(108, 92, 231, 0.3),
+      0 0 0 8px rgba(108, 92, 231, 0);
+  }
+  100% {
+    box-shadow:
+      0 4px 15px rgba(108, 92, 231, 0.3),
+      0 0 0 0 rgba(108, 92, 231, 0);
+  }
 }
 
 .btn-start:not(:disabled):not(.loading) {
