@@ -386,6 +386,238 @@
   // =============================================
 
   /**
+   * Affiche une alerte modale dans la page quand l'extension est obsolète.
+   * @param {string} currentVersion
+   * @param {string} latestVersion
+   */
+  function afficherAlerteMiseAJourPage(currentVersion, latestVersion, latestUrl) {
+    const ancienBackdrop = document.getElementById('checkmate-update-backdrop');
+    if (ancienBackdrop) {
+      ancienBackdrop.remove();
+    }
+
+    const backdrop = document.createElement('div');
+    backdrop.id = 'checkmate-update-backdrop';
+    backdrop.style.cssText = [
+      'position: fixed',
+      'inset: 0',
+      'background: rgba(5, 8, 24, 0.78)',
+      'display: flex',
+      'align-items: center',
+      'justify-content: center',
+      'padding: 20px',
+      'z-index: 2147483647'
+    ].join(';');
+
+    const card = document.createElement('div');
+    card.style.cssText = [
+      'width: min(720px, 100%)',
+      'background: linear-gradient(165deg, #ffffff 0%, #fff7ed 100%)',
+      'border: 3px solid #ef4444',
+      'border-radius: 18px',
+      'box-shadow: 0 30px 70px rgba(0,0,0,0.45)',
+      'padding: 28px',
+      'font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+      'color: #111827',
+      'text-align: center'
+    ].join(';');
+
+    const badge = document.createElement('div');
+    badge.textContent = 'ACTION REQUISE';
+    badge.style.cssText = [
+      'display:inline-block',
+      'background:#ef4444',
+      'color:#fff',
+      'font-weight:800',
+      'font-size:12px',
+      'letter-spacing:1px',
+      'padding:7px 12px',
+      'border-radius:999px',
+      'margin-bottom:14px'
+    ].join(';');
+
+    const title = document.createElement('h2');
+    title.textContent = 'Votre extension CheckMate n\'est pas a jour';
+    title.style.cssText = 'margin:0 0 12px 0; font-size:34px; line-height:1.15; color:#7f1d1d; font-weight:900;';
+
+    const desc = document.createElement('p');
+    desc.textContent = `Version installee: ${currentVersion || 'inconnue'} | Derniere version: ${latestVersion || 'inconnue'}`;
+    desc.style.cssText = 'margin:0 0 10px 0; color:#1f2937; font-size:18px; line-height:1.5; font-weight:700;';
+
+    const hint = document.createElement('p');
+    hint.textContent = 'Mettez a jour maintenant pour corriger les bugs et garantir la fiabilite du pointage.';
+    hint.style.cssText = 'margin:0 0 22px 0; color:#374151; font-size:17px; line-height:1.45;';
+
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex; justify-content:center; gap:12px; flex-wrap:wrap;';
+
+    const linkBtn = document.createElement('a');
+    linkBtn.textContent = 'Mettre a jour maintenant';
+    linkBtn.href = latestUrl || 'https://github.com';
+    linkBtn.target = '_blank';
+    linkBtn.rel = 'noopener noreferrer';
+    linkBtn.style.cssText = [
+      'background:#dc2626',
+      'text-decoration:none',
+      'border:2px solid #991b1b',
+      'color:#fff',
+      'border-radius:12px',
+      'padding:14px 22px',
+      'font-weight:800',
+      'font-size:18px',
+      'cursor:pointer',
+      'box-shadow: 0 10px 24px rgba(220,38,38,0.35)'
+    ].join(';');
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.textContent = 'Plus tard';
+    closeBtn.style.cssText = [
+      'background:#1f2937',
+      'border:none',
+      'color:#fff',
+      'border-radius:12px',
+      'padding:14px 22px',
+      'font-weight:700',
+      'font-size:17px',
+      'cursor:pointer'
+    ].join(';');
+
+    closeBtn.addEventListener('click', () => backdrop.remove());
+
+    actions.appendChild(linkBtn);
+    actions.appendChild(closeBtn);
+    card.appendChild(badge);
+    card.appendChild(title);
+    card.appendChild(desc);
+    card.appendChild(hint);
+    card.appendChild(actions);
+    backdrop.appendChild(card);
+    document.body.appendChild(backdrop);
+  }
+
+  /**
+   * Demande une confirmation explicite avant de lancer la signature
+   * si l'extension n'est pas a jour.
+   * @param {string} currentVersion
+   * @param {string} latestVersion
+   * @param {string} latestUrl
+   * @returns {Promise<boolean>} true si l'utilisateur accepte de continuer
+   */
+  function demanderConfirmationSignatureVersionObsolete(currentVersion, latestVersion, latestUrl) {
+    return new Promise((resolve) => {
+      const ancienBackdrop = document.getElementById('checkmate-update-confirm-backdrop');
+      if (ancienBackdrop) {
+        ancienBackdrop.remove();
+      }
+
+      const backdrop = document.createElement('div');
+      backdrop.id = 'checkmate-update-confirm-backdrop';
+      backdrop.style.cssText = [
+        'position: fixed',
+        'inset: 0',
+        'background: rgba(5, 8, 24, 0.84)',
+        'display: flex',
+        'align-items: center',
+        'justify-content: center',
+        'padding: 20px',
+        'z-index: 2147483647'
+      ].join(';');
+
+      const card = document.createElement('div');
+      card.style.cssText = [
+        'width: min(760px, 100%)',
+        'background: linear-gradient(165deg, #ffffff 0%, #fef2f2 100%)',
+        'border: 3px solid #dc2626',
+        'border-radius: 18px',
+        'box-shadow: 0 30px 70px rgba(0,0,0,0.45)',
+        'padding: 28px',
+        'font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+        'color: #111827',
+        'text-align: center'
+      ].join(';');
+
+      const title = document.createElement('h2');
+      title.textContent = 'Confirmation requise avant signature';
+      title.style.cssText = 'margin:0 0 10px 0; font-size:34px; line-height:1.15; color:#7f1d1d; font-weight:900;';
+
+      const desc = document.createElement('p');
+      desc.textContent = `Votre version (${currentVersion || 'inconnue'}) est depassee. Derniere version disponible: ${latestVersion || 'inconnue'}.`;
+      desc.style.cssText = 'margin:0 0 8px 0; color:#1f2937; font-size:18px; line-height:1.45; font-weight:700;';
+
+      const risk = document.createElement('p');
+      risk.textContent = 'Continuer peut provoquer des erreurs de signature ou un pointage invalide.';
+      risk.style.cssText = 'margin:0 0 18px 0; color:#991b1b; font-size:18px; line-height:1.45; font-weight:800;';
+
+      const actions = document.createElement('div');
+      actions.style.cssText = 'display:flex; justify-content:center; gap:12px; flex-wrap:wrap;';
+
+      const updateBtn = document.createElement('a');
+      updateBtn.textContent = 'Mettre a jour maintenant';
+      updateBtn.href = latestUrl || 'https://github.com';
+      updateBtn.target = '_blank';
+      updateBtn.rel = 'noopener noreferrer';
+      updateBtn.style.cssText = [
+        'background:#dc2626',
+        'text-decoration:none',
+        'border:2px solid #991b1b',
+        'color:#fff',
+        'border-radius:12px',
+        'padding:14px 22px',
+        'font-weight:800',
+        'font-size:18px',
+        'cursor:pointer'
+      ].join(';');
+
+      const continueBtn = document.createElement('button');
+      continueBtn.type = 'button';
+      continueBtn.textContent = 'Continuer quand meme';
+      continueBtn.style.cssText = [
+        'background:#f59e0b',
+        'border:none',
+        'color:#111827',
+        'border-radius:12px',
+        'padding:14px 22px',
+        'font-weight:800',
+        'font-size:18px',
+        'cursor:pointer'
+      ].join(';');
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.textContent = 'Annuler la signature';
+      cancelBtn.style.cssText = [
+        'background:#1f2937',
+        'border:none',
+        'color:#fff',
+        'border-radius:12px',
+        'padding:14px 22px',
+        'font-weight:700',
+        'font-size:17px',
+        'cursor:pointer'
+      ].join(';');
+
+      const closeWith = (value) => {
+        backdrop.remove();
+        resolve(value);
+      };
+
+      continueBtn.addEventListener('click', () => closeWith(true));
+      cancelBtn.addEventListener('click', () => closeWith(false));
+
+      actions.appendChild(updateBtn);
+      actions.appendChild(continueBtn);
+      actions.appendChild(cancelBtn);
+      card.appendChild(title);
+      card.appendChild(desc);
+      card.appendChild(risk);
+      card.appendChild(actions);
+      backdrop.appendChild(card);
+      document.body.appendChild(backdrop);
+    });
+  }
+
+  /**
    * Clique sur le bouton de validation du pointage
    * @param {string|string[]} buttonSelectors - Sélecteur(s) CSS du bouton de validation
    * @returns {Promise<boolean>} true si le clic a réussi
@@ -538,6 +770,27 @@
     if (message.action === 'ping') {
       sendResponse({ success: true, message: 'Content script actif' });
       return false;
+    }
+
+    // --- Action : afficherAlerteMiseAJour — Affiche une modale dans la page ---
+    if (message.action === 'afficherAlerteMiseAJour') {
+      afficherAlerteMiseAJourPage(message.currentVersion, message.latestVersion, message.latestUrl);
+      sendResponse({ success: true });
+      return false;
+    }
+
+    // --- Action : confirmerSignatureVersionObsolete — confirmation utilisateur bloquante ---
+    if (message.action === 'confirmerSignatureVersionObsolete') {
+      demanderConfirmationSignatureVersionObsolete(
+        message.currentVersion,
+        message.latestVersion,
+        message.latestUrl
+      ).then((confirmed) => {
+        sendResponse({ success: true, confirmed: !!confirmed });
+      }).catch((erreur) => {
+        sendResponse({ success: false, confirmed: false, error: erreur.message });
+      });
+      return true;
     }
   });
 

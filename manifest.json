@@ -1,10 +1,13 @@
 {
   "manifest_version": 3,
   "name": "CheckMate",
-  "version": "1.0.0",
+  "version": "1.5.0",
   "description": "Automatise le pointage de présence sur CESAR Emineo",
   "permissions": ["storage", "activeTab", "scripting", "notifications", "tabs"],
-  "host_permissions": ["https://cesar.emineo-informatique.fr/*"],
+  "host_permissions": [
+    "https://cesar.emineo-informatique.fr/*",
+    "https://api.github.com/*"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_title": "CheckMate"

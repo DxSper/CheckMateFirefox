@@ -10,6 +10,19 @@ const TIMEOUT_CHARGEMENT = 30000; // 30 secondes (site lent)
 const TIMEOUT_REDIRECTION = 30000; // 30 secondes (site lent)
 const EXECUTION_LOG_KEY = 'executionLogs';
 const MAX_EXECUTION_LOGS = 40;
+const NOTIFICATION_STATUS_ID = 'checkmate-pointage-status';
+const NOTIFICATION_DEDUPE_MS = 1800;
+const GITHUB_REPO = 'MattiaPARRINELLO/CheckMate';
+const GITHUB_API_HEADERS = {
+  Accept: 'application/vnd.github+json',
+  'X-GitHub-Api-Version': '2022-11-28'
+};
+
+let derniereNotification = {
+  titre: '',
+  message: '',
+  ts: 0
+};
 
 const SITE_SELECTORS = {
   calendrierJour: [
@@ -53,6 +66,165 @@ function log(tag, message, level = 'info') {
   appendExecutionLog(tag, message, level);
 }
 
+/**
+ * Compare deux versions x.y.z
+ * @param {string} a
+ * @param {string} b
+ * @returns {number} 1 si a>b, -1 si a<b, 0 si égal
+ */
+function comparerVersions(a, b) {
+  const pa = String(a || '').split('.').map((n) => Number(n) || 0);
+  const pb = String(b || '').split('.').map((n) => Number(n) || 0);
+  const len = Math.max(pa.length, pb.length);
+
+  for (let i = 0; i < len; i++) {
+    const va = pa[i] || 0;
+    const vb = pb[i] || 0;
+    if (va > vb) return 1;
+    if (va < vb) return -1;
+  }
+  return 0;
+}
+
+/**
+ * Récupère la dernière version publiée sur GitHub Releases
+ * @returns {Promise<string|null>}
+ */
+async function getDerniereVersionGithub() {
+  const repoWebUrl = `https://github.com/${GITHUB_REPO}`;
+  const latestUrl = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
+  const releasesUrl = `https://api.github.com/repos/${GITHUB_REPO}/releases?per_page=1`;
+  const tagsUrl = `https://api.github.com/repos/${GITHUB_REPO}/tags?per_page=1`;
+  try {
+    log('Mise à jour', `Appel GitHub releases/latest: ${latestUrl}`);
+
+    const response = await fetch(latestUrl, {
+      cache: 'no-store',
+      headers: GITHUB_API_HEADERS
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      log('Mise à jour', `Réponse GitHub reçue (id=${data.id || 'n/a'})`);
+      const tag = String(data.tag_name || '').trim();
+      if (tag) {
+        const normalizedTag = tag.replace(/^v/i, '');
+        log('Mise à jour', `tag_name brut='${tag}' -> normalisé='${normalizedTag}'`);
+        return {
+          version: normalizedTag,
+          url: data.html_url || `${repoWebUrl}/releases/tag/${tag}`
+        };
+      }
+      log('Mise à jour', 'Aucun tag_name trouvé dans la release GitHub latest', 'error');
+    }
+
+    // 404 fréquent si aucune release "latest" n'est publiée (draft/prerelease uniquement)
+    let errorBody = '';
+    try {
+      errorBody = await response.text();
+    } catch (_) {
+      // ignorer lecture body
+    }
+    log('Mise à jour', `releases/latest indisponible (${response.status}) pour ${GITHUB_REPO}${errorBody ? ` | body=${errorBody}` : ''}`, 'error');
+
+    // Fallback 1 : première release retournée par /releases
+    log('Mise à jour', `Fallback vers releases: ${releasesUrl}`);
+    const releasesResponse = await fetch(releasesUrl, {
+      cache: 'no-store',
+      headers: GITHUB_API_HEADERS
+    });
+    if (releasesResponse.ok) {
+      const releases = await releasesResponse.json();
+      if (Array.isArray(releases) && releases.length > 0) {
+        // Aligner le fallback sur la logique "latest": publication pleine, pas draft/prerelease.
+        const release = releases.find((r) => r && !r.draft && !r.prerelease);
+        if (!release) {
+          log('Mise à jour', 'Fallback releases: uniquement des drafts/prereleases detectees', 'error');
+        } else {
+          const releaseTag = String(release.tag_name || '').trim();
+          if (releaseTag) {
+            const normalizedReleaseTag = releaseTag.replace(/^v/i, '');
+            log('Mise à jour', `Fallback releases OK: tag='${releaseTag}' -> '${normalizedReleaseTag}'`);
+            return {
+              version: normalizedReleaseTag,
+              url: release.html_url || `${repoWebUrl}/releases/tag/${releaseTag}`
+            };
+          }
+        }
+      }
+      log('Mise à jour', 'Fallback releases: aucune release exploitable trouvée', 'error');
+    } else {
+      log('Mise à jour', `Fallback releases indisponible (${releasesResponse.status})`, 'error');
+    }
+
+    // Fallback 2 : premier tag Git
+    log('Mise à jour', `Fallback vers tags: ${tagsUrl}`);
+    const tagsResponse = await fetch(tagsUrl, {
+      cache: 'no-store',
+      headers: GITHUB_API_HEADERS
+    });
+    if (!tagsResponse.ok) {
+      log('Mise à jour', `Fallback tags indisponible (${tagsResponse.status})`, 'error');
+      return null;
+    }
+
+    const tags = await tagsResponse.json();
+    if (!Array.isArray(tags) || tags.length === 0) {
+      log('Mise à jour', 'Fallback tags: aucun tag trouvé', 'error');
+      return null;
+    }
+
+    const firstTag = String((tags[0] && tags[0].name) || '').trim();
+    if (!firstTag) {
+      log('Mise à jour', 'Fallback tags: premier tag invalide', 'error');
+      return null;
+    }
+
+    const normalizedFirstTag = firstTag.replace(/^v/i, '');
+    log('Mise à jour', `Fallback tags OK: tag='${firstTag}' -> '${normalizedFirstTag}'`);
+    return {
+      version: normalizedFirstTag,
+      url: `${repoWebUrl}/tags`
+    };
+  } catch (e) {
+    log('Mise à jour', `Erreur réseau pendant le check version: ${e.message}`, 'error');
+    return null;
+  }
+}
+
+/**
+ * Vérifie si l'extension locale est obsolète
+ * @returns {Promise<{outdated:boolean,currentVersion:string,latestVersion:string|null,latestUrl:string|null}>}
+ */
+async function verifierMiseAJour() {
+  const currentVersion = chrome.runtime.getManifest().version;
+  log('Mise à jour', `Début check version (repo=${GITHUB_REPO}, locale=${currentVersion})`);
+
+  const latestInfo = await getDerniereVersionGithub();
+  const latestVersion = latestInfo ? latestInfo.version : null;
+  const latestUrl = latestInfo ? latestInfo.url : null;
+
+  if (!latestVersion) {
+    log('Mise à jour', 'Check version terminé sans version distante exploitable', 'error');
+    return {
+      outdated: false,
+      currentVersion,
+      latestVersion: null,
+      latestUrl: null
+    };
+  }
+
+  const outdated = comparerVersions(latestVersion, currentVersion) > 0;
+  log('Mise à jour', `Comparaison versions: locale=${currentVersion}, distante=${latestVersion}, outdated=${outdated}`);
+
+  return {
+    outdated,
+    currentVersion,
+    latestVersion,
+    latestUrl
+  };
+}
+
 // =============================================
 // UTILITAIRES
 // =============================================
@@ -61,9 +233,29 @@ function log(tag, message, level = 'info') {
  * Affiche une notification Chrome
  * @param {string} titre - Titre de la notification
  * @param {string} message - Corps de la notification
+ * @param {{id?: string, dedupeMs?: number}} options
  */
-function afficherNotification(titre, message) {
-  chrome.notifications.create({
+function afficherNotification(titre, message, options = {}) {
+  const id = options.id || NOTIFICATION_STATUS_ID;
+  const dedupeMs = typeof options.dedupeMs === 'number' ? options.dedupeMs : NOTIFICATION_DEDUPE_MS;
+  const now = Date.now();
+
+  if (
+    derniereNotification.titre === titre
+    && derniereNotification.message === message
+    && (now - derniereNotification.ts) < dedupeMs
+  ) {
+    log('Notification', `Doublon ignore: ${titre} | ${message}`);
+    return;
+  }
+
+  derniereNotification = {
+    titre,
+    message,
+    ts: now
+  };
+
+  chrome.notifications.create(id, {
     type: 'basic',
     iconUrl: 'icons/icon128.png',
     title: titre,
@@ -166,11 +358,18 @@ async function attendreSelecteurDansOnglet(tabId, selector, timeout = 45000, int
 /**
  * Lance le message de signature vers le content script.
  * @param {number} tabId - ID de l'onglet
+ * @param {{outdated:boolean,currentVersion:string,latestVersion:string|null,latestUrl:string|null}} updateInfo
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-async function lancerSignatureViaContentScript(tabId) {
+async function lancerSignatureViaContentScript(tabId, updateInfo) {
+  const payload = {
+    action: 'lancerSignature'
+  };
+
+  log('Pointage', `Payload lancerSignature: ${JSON.stringify(payload)}`);
+
   return new Promise((resolve) => {
-    chrome.tabs.sendMessage(tabId, { action: 'lancerSignature' }, (response) => {
+    chrome.tabs.sendMessage(tabId, payload, (response) => {
       if (chrome.runtime.lastError) {
         log('Pointage', `Erreur sendMessage: ${chrome.runtime.lastError.message}`);
         resolve({ success: false, error: chrome.runtime.lastError.message });
@@ -180,6 +379,100 @@ async function lancerSignatureViaContentScript(tabId) {
       }
     });
   });
+}
+
+/**
+ * Demande au content script d'afficher l'alerte de mise à jour dans la page.
+ * @param {number} tabId
+ * @param {{outdated:boolean,currentVersion:string,latestVersion:string|null,latestUrl:string|null}} updateInfo
+ */
+async function afficherAlerteMiseAJourDansPage(tabId, updateInfo) {
+  if (!tabId || !updateInfo || !updateInfo.outdated) {
+    return;
+  }
+
+  try {
+    await new Promise((resolve) => {
+      chrome.tabs.sendMessage(tabId, {
+        action: 'afficherAlerteMiseAJour',
+        currentVersion: updateInfo.currentVersion,
+        latestVersion: updateInfo.latestVersion,
+        latestUrl: updateInfo.latestUrl
+      }, () => {
+        if (chrome.runtime.lastError) {
+          log('Mise à jour', `Impossible d'afficher la modale en page: ${chrome.runtime.lastError.message}`, 'error');
+        } else {
+          log('Mise à jour', 'Modale de mise à jour affichée dans la page');
+        }
+        resolve();
+      });
+    });
+  } catch (e) {
+    log('Mise à jour', `Erreur lors de l'affichage de la modale en page: ${e.message}`, 'error');
+  }
+}
+
+/**
+ * Demande une confirmation explicite avant la signature si version obsolete.
+ * @param {number} tabId
+ * @param {{outdated:boolean,currentVersion:string,latestVersion:string|null,latestUrl:string|null}} updateInfo
+ * @returns {Promise<boolean>} true pour continuer, false pour annuler
+ */
+async function confirmerSignatureSiVersionObsolete(tabId, updateInfo) {
+  if (!tabId || !updateInfo || !updateInfo.outdated) {
+    return true;
+  }
+
+  try {
+    const response = await new Promise((resolve) => {
+      chrome.tabs.sendMessage(tabId, {
+        action: 'confirmerSignatureVersionObsolete',
+        currentVersion: updateInfo.currentVersion,
+        latestVersion: updateInfo.latestVersion,
+        latestUrl: updateInfo.latestUrl
+      }, (res) => {
+        if (chrome.runtime.lastError) {
+          log('Mise à jour', `Impossible d'ouvrir la confirmation en page: ${chrome.runtime.lastError.message}`, 'error');
+          resolve({ success: false, confirmed: false });
+          return;
+        }
+        resolve(res || { success: false, confirmed: false });
+      });
+    });
+
+    const confirmed = !!(response && response.success && response.confirmed);
+    log('Mise à jour', `Confirmation utilisateur avant signature: ${confirmed ? 'CONTINUER' : 'ANNULER'}`);
+    return confirmed;
+  } catch (e) {
+    log('Mise à jour', `Erreur confirmation avant signature: ${e.message}`, 'error');
+    return false;
+  }
+}
+
+/**
+ * Attend que le content script soit joignable dans l'onglet (ping répété).
+ * @param {number} tabId
+ * @param {number} timeout - Timeout total en ms (défaut 6000ms)
+ * @returns {Promise<boolean>} true si joignable, false si timeout
+ */
+async function attendrePingContentScript(tabId, timeout = 6000) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeout) {
+    await new Promise((r) => setTimeout(r, 300));
+    try {
+      const ok = await new Promise((resolve) => {
+        chrome.tabs.sendMessage(tabId, { action: 'ping' }, (res) => {
+          if (chrome.runtime.lastError) resolve(false);
+          else resolve(!!(res && res.success));
+        });
+      });
+      if (ok) return true;
+    } catch (_) {
+      // pas encore prêt
+    }
+  }
+  log('Mise à jour', `Content script non joignable après ${timeout}ms (tabId=${tabId})`, 'error');
+  return false;
 }
 
 /**
@@ -391,8 +684,19 @@ async function etape3_attendreRedirection(tabId) {
  */
 async function lancerPointage() {
   let tabId = null;
+  let updateInfo = {
+    outdated: false,
+    currentVersion: chrome.runtime.getManifest().version,
+    latestVersion: null,
+    latestUrl: null
+  };
 
   try {
+    // Vérifier la version au début de chaque pointage
+    log('Pointage', 'Pré-étape: vérification de la mise à jour avant toute action');
+    updateInfo = await verifierMiseAJour();
+    log('Pointage', `Pré-étape: résultat mise à jour -> outdated=${updateInfo.outdated}, locale=${updateInfo.currentVersion}, distante=${updateInfo.latestVersion || 'n/a'}`);
+
     // Récupérer les identifiants depuis le stockage
     const data = await chrome.storage.local.get(['username', 'password', 'signatureData']);
 
@@ -402,9 +706,29 @@ async function lancerPointage() {
 
     // ÉTAPE 1 — Ouvrir la page de connexion
     log('Pointage', 'Démarrage — Étape 1 : ouverture de la page de connexion');
-    afficherNotification('🕐 Pointage Auto', 'Ouverture de la page de connexion...');
+    afficherNotification('🕐 Pointage Auto', 'Pointage lancé...');
     tabId = await etape1_ouvrirPageConnexion();
     log('Pointage', `Étape 1 terminée — onglet créé (tabId=${tabId})`);
+
+    // Si version obsolète : bloquer immédiatement dès l'ouverture de la page, avant tout login.
+    if (updateInfo.outdated) {
+      log('Pointage', 'Version obsolète — attente du content script puis confirmation utilisateur...');
+      await attendrePingContentScript(tabId);
+      const continuer = await confirmerSignatureSiVersionObsolete(tabId, updateInfo);
+      if (!continuer) {
+        log('Pointage', "Processus annulé par l'utilisateur (version non à jour)", 'error');
+        try { chrome.tabs.remove(tabId); } catch (_) { }
+        return {
+          success: false,
+          error: "Signature annulée : version de l'extension non à jour",
+          outdated: true,
+          currentVersion: updateInfo.currentVersion,
+          latestVersion: updateInfo.latestVersion,
+          latestUrl: updateInfo.latestUrl
+        };
+      }
+      log('Pointage', 'Utilisateur a confirmé la poursuite malgré la version obsolète');
+    }
 
     // VÉRIFICATION — Session déjà active ?
     log('Pointage', 'Vérification de la session existante...');
@@ -414,12 +738,10 @@ async function lancerPointage() {
     if (dejaConnecte) {
       // L'utilisateur est déjà connecté → passer directement à la signature
       log('Pointage', 'Session active détectée — étapes 2 et 3 ignorées, passage à la signature');
-      afficherNotification('✅ Pointage Auto', 'Déjà connecté ! Lancement de la signature...');
     } else {
 
       // ÉTAPE 2 — Remplir le formulaire et le soumettre (uniquement si pas encore connecté)
       log('Pointage', 'Étape 2 — Remplissage du formulaire de connexion...');
-      afficherNotification('🕐 Pointage Auto', 'Connexion en cours...');
       await etape2_remplirFormulaire(tabId, data.username, data.password);
       log('Pointage', 'Étape 2 terminée — formulaire soumis');
 
@@ -428,7 +750,6 @@ async function lancerPointage() {
       await etape3_attendreRedirection(tabId);
 
       log('Pointage', 'Étape 3 terminée — redirection détectée, connexion réussie');
-      afficherNotification('✅ Pointage Auto', 'Connexion réussie ! Lancement de la signature...');
     } // fin du else (connexion nécessaire)
 
     // ÉTAPE 4 — Préparer la page de signature (site potentiellement lent)
@@ -439,10 +760,11 @@ async function lancerPointage() {
     }
 
     // ÉTAPE 5 — Lancer la signature automatique via le content script
+    // La confirmation utilisateur de version obsolète est gérée DANS ce flux message.
     log('Pointage', `Étape 5 — Envoi du message 'lancerSignature' au content script (tabId=${tabId})...`);
     afficherNotification('🕐 Pointage Auto', 'Signature en cours...');
 
-    let resultatSignature = await lancerSignatureViaContentScript(tabId);
+    let resultatSignature = await lancerSignatureViaContentScript(tabId, updateInfo);
 
     // Retry ciblé: cas fréquent juste après login où le DOM met encore quelques secondes à stabiliser.
     if (!resultatSignature.success && resultatSignature.error && resultatSignature.error.includes('Aucun bouton de signature trouvé')) {
@@ -450,7 +772,7 @@ async function lancerPointage() {
       await new Promise((resolve) => setTimeout(resolve, 10000));
       const boutonRetryPret = await attendreSelecteurDansOnglet(tabId, 'button.buttonPresent', 20000, 1000);
       if (boutonRetryPret) {
-        resultatSignature = await lancerSignatureViaContentScript(tabId);
+        resultatSignature = await lancerSignatureViaContentScript(tabId, updateInfo);
       }
     }
 
@@ -465,7 +787,11 @@ async function lancerPointage() {
 
     return {
       success: true,
-      message: 'Présence pointée et signée avec succès !'
+      message: 'Présence pointée et signée avec succès !',
+      outdated: updateInfo.outdated,
+      currentVersion: updateInfo.currentVersion,
+      latestVersion: updateInfo.latestVersion,
+      latestUrl: updateInfo.latestUrl
     };
 
   } catch (erreur) {
@@ -475,7 +801,11 @@ async function lancerPointage() {
 
     return {
       success: false,
-      error: erreur.message
+      error: erreur.message,
+      outdated: updateInfo.outdated,
+      currentVersion: updateInfo.currentVersion,
+      latestVersion: updateInfo.latestVersion,
+      latestUrl: updateInfo.latestUrl
     };
   }
 }
