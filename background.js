@@ -13,7 +13,7 @@ const EXECUTION_LOG_KEY = 'executionLogs';
 const MAX_EXECUTION_LOGS = 40;
 const NOTIFICATION_STATUS_ID = 'checkmate-pointage-status';
 const NOTIFICATION_DEDUPE_MS = 1800;
-const GITHUB_REPO = 'MattiaPARRINELLO/CheckMate';
+const GITHUB_REPO = 'DxSper/CheckMateFirefox';
 const GITHUB_API_HEADERS = {
   Accept: 'application/vnd.github+json',
   'X-GitHub-Api-Version': '2022-11-28'

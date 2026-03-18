@@ -45,60 +45,70 @@ CheckMate est une extension Firefox conçue pour les apprenants et formateurs ut
 
 ## Installation
 
-> CheckMate n'est pas _encore_ disponible sur le Firefox Add-ons Store. L'installation se fait manuellement en mode développeur, la procédure prend moins d'une minute.
-
-### Étape 1 - Télécharger l'extension
-
-Téléchargez le fichier **`CheckMateFirefox.xpi`** ou clonez ce dépôt, puis conservez les fichiers dans un dossier.
-
-> 💡 Ne supprimez pas ce dossier après l'installation - Firefox en a besoin pour charger l'extension.
+> ⚠️ Firefox exige que les extensions soient signées numériquement par Mozilla. Cette page explique les différentes méthodes d'installation.
 
 ---
 
-### Étape 2 - Ouvrir la page des extensions Firefox
+### Méthode 1 : Mode développeur temporaire (la plus simple)
 
-Dans la barre d'adresse de Firefox, saisissez :
+Cette méthode charge l'extension sans l'installer définitivement. Idéale pour tester.
 
-```
-about:debugging#/runtime/this-firefox
-```
+1. Ouvrez Firefox et allez dans la barre d'adresse :
+   ```
+   about:debugging#/runtime/this-firefox
+   ```
 
-Ou accédez à **Menu > Extensions et thèmes** (`Ctrl+Shift+A` / `Cmd+Shift+A`).
+2. Dans le menu Firefox (☰), cliquez sur **Modules complémentaires et thèmes**
+   - Ou appuyez sur `Ctrl+Shift+A` (Linux/Windows) / `Cmd+Shift+A` (Mac)
 
----
+3. Cliquez sur **"Déboguer les modules complémentaires"**
 
-### Étape 3 - Activer le mode développeur
+4. Cliquez sur **"Charger un module complémentaire temporaire..."**
 
-Dans la page des extensions, cliquez sur **"Déboguer les extensions"** ou activez le **Mode développeur**.
+5. Sélectionnez le fichier `manifest.json` de ce dossier
 
----
-
-### Étape 4 - Charger l'extension temporairement (recommandé pour le développement)
-
-1. Cliquez sur **"Charger un module complémentaire temporaire..."**
-2. Sélectionnez le fichier `manifest.json` dans le dossier CheckMate Firefox
-
-> Cette méthode est idéale pour le développement et les tests. L'extension sera chargée temporairement et disparaîtra à la fermeture de Firefox.
+> ✅ L'extension sera active tant que Firefox reste ouvert. Elle disparaîtra à la fermeture.
 
 ---
 
-### Étape 5 - Installation permanente (optionnel)
+### Méthode 2 : Installation permanente (avec signature désactivée)
 
-Pour une installation permanente :
+Pour une installation qui persiste après le redémarrage de Firefox, vous devez désactiver la vérification de signature :
 
-1. zippez tous les fichiers de l'extension (manifest.json, background.js, content.js, popup.html, popup.js, popup.css, et le dossier icons/)
-2. Renommez le `.zip` en `.xpi`
-3. Dans Firefox, allez dans `about:addons`
-4. Cliquez sur l'engrenage > "Installer depuis un fichier..."
-5. Sélectionnez votre fichier `.xpi`
+1. **Désactiver la vérification de signature :**
+   - Dans la barre d'adresse, tapez `about:config` et appuyez sur Entrée
+   - Cliquez sur **"Accepter le risque et poursuivre"**
+   - Recherchez : `xpinstall.signatures.required`
+   - Double-cliquez pour passer la valeur à `false`
 
-> ⚠️ Pour une installation permanente depuis un fichier `.xpi`, vous devrez signer l'extension sur [Firefox Add-on Developer Hub](https://addons.mozilla.org/developers/) ou désactiver la vérification de signature via `about:config` (`xpinstall.signatures.required = false` en développement).
+2. **Installer l'extension :**
+   - Téléchargez le fichier `CheckMateFirefox.xpi` depuis la [page des releases](../../releases/latest)
+   - Dans Firefox, allez dans `about:addons`
+   - Cliquez sur l'**engrenage** ⚙️
+   - Sélectionnez **"Installer depuis un fichier..."**
+   - Choisissez le fichier `.xpi`
+
+> ⚠️ **Attention** : Désactiver `xpinstall.signatures.required` réduit la sécurité de Firefox. Ne le faites que si vous faites confiance à la source de l'extension.
 
 ---
 
-### Étape 6 - Vérifier l'installation
+### Méthode 3 : Version de développement (Nightly/Dev/ESR)
 
-CheckMate apparaît dans la liste des extensions avec son logo. Épinglez-la dans la barre d'outils Firefox pour y accéder facilement.
+Les versions spéciales de Firefox permettent de désactiver la signature :
+
+- **Firefox Developer Edition** ou **Firefox Nightly** : possède un paramètre natif pour charger des extensions non signées
+- **Firefox ESR** : conçu pour les entreprises, permet aussi de désactiver la vérification
+
+1. Installez [Firefox Developer Edition](https://www.mozilla.org/fr/firefox/developer/) ou [Firefox Nightly](https://www.mozilla.org/fr/firefox/nightly/)
+2. Suivez la **Méthode 1** ci-dessus (pas besoin de désactiver la signature en mode développeur)
+
+---
+
+### Vérifier l'installation
+
+Quel que soit votre choix de méthode, CheckMate doit apparaître :
+- Dans `about:debugging#/runtime/this-firefox` (liste des extensions)
+- Épinglez l'icône 🔌 dans la barre d'outils Firefox pour un accès rapide
 
 ---
 
@@ -168,9 +178,13 @@ CheckMate vérifie automatiquement sa version à chaque pointage en interrogeant
 
 ### Comment mettre à jour
 
-1. Téléchargez la nouvelle version depuis ce dépôt.
-2. Remplacez le contenu du dossier existant par les nouveaux fichiers.
-3. Dans `about:debugging#/runtime/this-firefox`, cliquez sur le bouton **↻ Recharger** sur la carte CheckMate.
+**En mode développeur temporaire :**
+1. Retournez dans `about:debugging#/runtime/this-firefox`
+2. Cliquez sur **↻ Recharger** sur la carte CheckMate
+
+**En installation permanente :**
+1. Téléchargez la nouvelle version depuis la [page des releases](../../releases/latest)
+2. Remplacez les fichiers existants par les nouveaux
 
 > Vos identifiants et votre signature sont conservés dans `browser.storage.local` - ils ne sont **pas** supprimés lors d'une mise à jour.
 
@@ -189,14 +203,11 @@ CheckMate vérifie automatiquement sa version à chaque pointage en interrogeant
 | Navigateur             | Support                      | Moteur   |
 | ---------------------- | ---------------------------- | -------- |
 | Firefox                | ✅ Supporté                  | Gecko    |
-| Firefox pour Android   | ✅ Compatible                | Gecko    |
+| Firefox Dev/Nightly    | ✅ Supporté                  | Gecko    |
+| Firefox pour Android   | ⏳ En cours                  | Gecko    |
 | Google Chrome          | ❌ Non supporté              | Chromium |
 | Microsoft Edge         | ❌ Non supporté              | Chromium |
 | Safari                 | ❌ Non supporté              | WebKit   |
-| Safari iOS             | ❌ Non supporté              | WebKit   |
-
-> **Vous utilisez Chrome ou un autre navigateur ?**
-> Une version compatible Chrome peut être développée. [👉 Ouvrez une issue GitHub](https://github.com/DxSper/CheckMateFirefox/issues/new?title=Support+Chrome&body=Je+souhaite+une+version+compatible+Chrome.) pour voter pour cette fonctionnalité.
 
 ---
 
@@ -205,14 +216,14 @@ CheckMate vérifie automatiquement sa version à chaque pointage en interrogeant
 ### Prérequis
 
 - Firefox 109+ (pour le support MV3 complet)
-- Node.js 18+ (optionnel, pour les tests automatisés)
+- Node.js 18+ (optionnel)
 
 ### Structure du projet
 
 ```
 CheckMateFirefox/
 ├── manifest.json       # Manifest de l'extension Firefox (MV3)
-├── background.js       # Script de fond (service worker)
+├── background.js       # Script de fond (background script)
 ├── content.js          # Script de contenu (injecté dans CESAR)
 ├── popup.html          # Interface du popup
 ├── popup.js            # Logique du popup
@@ -224,20 +235,6 @@ CheckMateFirefox/
 ### API WebExtension
 
 Cette extension utilise l'API WebExtension standard (`browser.*`) au lieu de l'API Chrome (`chrome.*`), ce qui assure la compatibilité avec Firefox et les navigateurs basés sur Gecko.
-
-### Tester l'extension
-
-1. Clonez ce dépôt
-2. Ouvrez Firefox et allez sur `about:debugging#/runtime/this-firefox`
-3. Cliquez sur **"Charger un module complémentaire temporaire..."**
-4. Sélectionnez le fichier `manifest.json`
-
-### Publier sur Firefox Add-ons
-
-1. Créez un compte sur [Firefox Add-on Developer Hub](https://addons.mozilla.org/developers/)
-2. Créez un fichier `.zip` de l'extension (sans le dossier `.git`)
-3. Soumettez le fichier `.zip` pour révision
-4. Une fois signé par Mozilla, l'extension sera disponible sur le Firefox Add-ons Store
 
 ---
 
