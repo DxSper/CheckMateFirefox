@@ -27,7 +27,7 @@
 
 ## Présentation
 
-CheckMate est une extension Firefox conçue pour les apprenants et formateurs utilisant la plateforme **CESAR Emineo**. Elle automatise entièrement le processus de pointage : ouverture de la session, connexion, recherche du bouton de signature, reproduction fidèle de votre signature manuscrite et validation.
+CheckMate est une extension Firefox forkée depuis [MattiaPARRINELLO/CheckMate](https://github.com/MattiaPARRINELLO/CheckMate), initialement conçue pour Chrome. Elle a été adaptée pour Firefox afin de répondre aux besoins des utilisateurs de ce navigateur.
 
 > Une fois configurée, il suffit d'un seul clic pour pointer sa présence.
 
@@ -239,5 +239,5 @@ Cette extension utilise l'API WebExtension standard (`browser.*`) au lieu de l'A
 ---
 
 <div align="center">
-  <sub>Fait avec ♟️ par <a href="https://github.com/DxSper">DxSper</a></sub>
+  <sub>Forkée depuis <a href="https://github.com/MattiaPARRINELLO/CheckMate">MattiaPARRINELLO/CheckMate</a> · Portée sur Firefox par <a href="https://github.com/DxSper">DxSper</a></sub>
 </div>
