@@ -14,8 +14,7 @@
     "https://api.github.com/*"
   ],
   "background": {
-    "scripts": ["background.js"],
-    "type": "module"
+    "scripts": ["background.js"]
   },
   "content_scripts": [
     {
@@ -43,7 +42,7 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "checkmate@cesar.emineo",
-      "strict_min_version": "109.0"
+      "strict_min_version": "142.0"
     }
   }
 }
