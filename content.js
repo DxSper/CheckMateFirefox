@@ -2,6 +2,7 @@
 // Pointage Auto — Content Script (content.js)
 // S'injecte sur https://cesar.emineo-informatique.fr/*
 // Fournit les fonctions d'interaction avec le DOM
+// Compatible Firefox (WebExtension API)
 // =============================================
 
 (() => {
@@ -375,9 +376,9 @@
       console.log('[Signature] Replay terminé avec succès');
       return true;
 
-    } catch (erreur) {
-      console.error('[Signature] Erreur lors du replay:', erreur.message);
-      throw erreur;
+    } catch (error) {
+      console.error('[Signature] Erreur lors du replay:', error.message);
+      throw error;
     }
   }
 
@@ -642,9 +643,9 @@
       console.log('[Validation] Bouton de validation cliqué');
       return true;
 
-    } catch (erreur) {
-      console.error('[Validation] Erreur:', erreur.message);
-      throw erreur;
+    } catch (error) {
+      console.error('[Validation] Erreur:', error.message);
+      throw error;
     }
   }
 
@@ -652,7 +653,7 @@
   // ÉCOUTEUR DE MESSAGES DU BACKGROUND
   // =============================================
 
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     // --- Action : lancerSignature — Flux complet de signature automatique ---
     if (message.action === 'lancerSignature') {
@@ -689,10 +690,8 @@
           log('Étape 3/8 — Canvas de signature détecté dans le DOM');
 
           // 4. Récupérer les données de signature depuis le storage
-          log('Étape 4/8 — Récupération des données de signature depuis chrome.storage.local...');
-          const result = await new Promise(resolve => {
-            chrome.storage.local.get(['signatureData'], resolve);
-          });
+          log('Étape 4/8 — Récupération des données de signature depuis browser.storage.local...');
+          const result = await browser.storage.local.get(['signatureData']);
 
           if (!result.signatureData || result.signatureData.length === 0) {
             log('Étape 4/8 — ERREUR: aucune donnée de signature dans le storage');
@@ -756,11 +755,11 @@
             sendResponse({ success: false, error: `Confirmation inattendue : "${texteConfirmation}"` });
           }
 
-        } catch (erreur) {
+        } catch (error) {
           const t = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-          console.error(`[${t}][Signature] ERREUR FATALE: ${erreur.message}`);
-          console.error(`[${t}][Signature] Stack:`, erreur.stack);
-          sendResponse({ success: false, error: erreur.message });
+          console.error(`[${t}][Signature] ERREUR FATALE: ${error.message}`);
+          console.error(`[${t}][Signature] Stack:`, error.stack);
+          sendResponse({ success: false, error: error.message });
         }
       })();
       return true; // Réponse asynchrone
@@ -787,8 +786,8 @@
         message.latestUrl
       ).then((confirmed) => {
         sendResponse({ success: true, confirmed: !!confirmed });
-      }).catch((erreur) => {
-        sendResponse({ success: false, confirmed: false, error: erreur.message });
+      }).catch((error) => {
+        sendResponse({ success: false, confirmed: false, error: error.message });
       });
       return true;
     }

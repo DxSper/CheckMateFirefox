@@ -1,6 +1,7 @@
 // =============================================
 // Pointage Auto — Script du popup
 // Gestion de la configuration et du canvas signature
+// Compatible Firefox (WebExtension API)
 // =============================================
 
 const EXECUTION_LOG_KEY = 'executionLogs';
@@ -89,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
     body.classList.toggle('compact', enabled);
     btnCompact.setAttribute('aria-pressed', String(enabled));
     if (persist) {
-      chrome.storage.local.set({ uiCompactMode: enabled });
+      browser.storage.local.set({ uiCompactMode: enabled });
     }
   }
 
@@ -99,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
    * @param {string} message
    * @param {'info'|'success'|'error'} level
    */
-  function appendExecutionLog(tag, message, level = 'info') {
+  async function appendExecutionLog(tag, message, level = 'info') {
     const entry = {
       id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
       ts: new Date().toISOString(),
@@ -109,11 +110,14 @@ document.addEventListener('DOMContentLoaded', () => {
       level
     };
 
-    chrome.storage.local.get([EXECUTION_LOG_KEY], (result) => {
+    try {
+      const result = await browser.storage.local.get([EXECUTION_LOG_KEY]);
       const logs = Array.isArray(result[EXECUTION_LOG_KEY]) ? result[EXECUTION_LOG_KEY] : [];
       logs.unshift(entry);
-      chrome.storage.local.set({ [EXECUTION_LOG_KEY]: logs.slice(0, MAX_EXECUTION_LOGS) });
-    });
+      await browser.storage.local.set({ [EXECUTION_LOG_KEY]: logs.slice(0, MAX_EXECUTION_LOGS) });
+    } catch (e) {
+      console.error('Erreur appendExecutionLog:', e);
+    }
   }
 
   /**
@@ -320,11 +324,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * Charge les données sauvegardées depuis chrome.storage.local
+   * Charge les données sauvegardées depuis browser.storage.local
    * et pré-remplit les champs du popup
    */
-  function loadSavedData() {
-    chrome.storage.local.get(['username', 'password', 'signatureData', 'lastAction', EXECUTION_LOG_KEY, 'uiCompactMode'], (result) => {
+  async function loadSavedData() {
+    try {
+      const result = await browser.storage.local.get(['username', 'password', 'signatureData', 'lastAction', EXECUTION_LOG_KEY, 'uiCompactMode']);
+      
       // Pré-remplir l'identifiant
       if (result.username) {
         usernameInput.value = result.username;
@@ -357,14 +363,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Restaurer le thème compact
       setCompactMode(!!result.uiCompactMode, false);
-    });
+    } catch (e) {
+      console.error('Erreur loadSavedData:', e);
+    }
   }
 
   // Charger les données au démarrage du popup
   loadSavedData();
 
   // Mettre à jour le journal et le mode compact en temps réel
-  chrome.storage.onChanged.addListener((changes, areaName) => {
+  browser.storage.onChanged.addListener((changes, areaName) => {
     if (areaName !== 'local') return;
 
     if (changes[EXECUTION_LOG_KEY]) {
@@ -383,10 +391,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnReportBug) {
     btnReportBug.addEventListener('click', () => {
-      const version = (chrome.runtime.getManifest() && chrome.runtime.getManifest().version) || 'inconnue';
-      const browser = navigator.userAgent || 'inconnu';
+      const manifest = browser.runtime.getManifest();
+      const version = manifest?.version || 'inconnue';
+      const browserInfo = navigator.userAgent || 'inconnu';
       const title = encodeURIComponent('[Bug] Decrire le probleme en une phrase');
-      const body = encodeURIComponent(
+      const bodyContent = encodeURIComponent(
         '## Description\n' +
         'Expliquez le comportement observe.\n\n' +
         '## Etapes pour reproduire\n' +
@@ -397,18 +406,17 @@ document.addEventListener('DOMContentLoaded', () => {
         '...\n\n' +
         '## Resultat obtenu\n' +
         '...\n\n' +
-        `## Infos techniques\n- Version CheckMate: ${version}\n- Navigateur: ${browser}`
+        `## Infos techniques\n- Version CheckMate: ${version}\n- Navigateur: Firefox ${browserInfo}`
       );
-      const url = `https://github.com/MattiaPARRINELLO/CheckMate/issues/new?title=${title}&body=${body}`;
-      chrome.tabs.create({ url });
+      const url = `https://github.com/DxSper/CheckMateFirefox/issues/new?title=${title}&body=${bodyContent}`;
+      browser.tabs.create({ url });
     });
   }
 
-  btnClearLogs.addEventListener('click', () => {
-    chrome.storage.local.set({ [EXECUTION_LOG_KEY]: [] }, () => {
-      renderExecutionLogs([]);
-      updateStatusBar('Journal vide');
-    });
+  btnClearLogs.addEventListener('click', async () => {
+    await browser.storage.local.set({ [EXECUTION_LOG_KEY]: [] });
+    renderExecutionLogs([]);
+    updateStatusBar('Journal vide');
   });
 
   if (updateModalClose) {
@@ -437,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // BOUTON SAUVEGARDER
   // =============================================
 
-  btnSave.addEventListener('click', () => {
+  btnSave.addEventListener('click', async () => {
     const username = usernameInput.value.trim();
     const password = passwordInput.value;
 
@@ -458,25 +466,24 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Sauvegarde dans chrome.storage.local
+    // Sauvegarde dans browser.storage.local
     const lastAction = `Configuration sauvegardée — ${formatDateHeure()}`;
 
-    chrome.storage.local.set({
-      username: username,
-      password: password,
-      signatureData: signatureData,
-      lastAction: lastAction
-    }, () => {
-      if (chrome.runtime.lastError) {
-        updateStatusBar('Erreur lors de la sauvegarde');
-        appendExecutionLog('Configuration', 'Erreur lors de la sauvegarde', 'error');
-        console.error('Erreur de sauvegarde:', chrome.runtime.lastError);
-        return;
-      }
+    try {
+      await browser.storage.local.set({
+        username: username,
+        password: password,
+        signatureData: signatureData,
+        lastAction: lastAction
+      });
       updateConfigStatus(true);
       statusBarText.textContent = lastAction;
       appendExecutionLog('Configuration', 'Configuration sauvegardee', 'success');
-    });
+    } catch (e) {
+      updateStatusBar('Erreur lors de la sauvegarde');
+      appendExecutionLog('Configuration', 'Erreur lors de la sauvegarde', 'error');
+      console.error('Erreur de sauvegarde:', e);
+    }
   });
 
   // =============================================
@@ -485,7 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnStart.addEventListener('click', () => {
     // Vérifier que la configuration est complète avant de lancer
-    chrome.storage.local.get(['username', 'password', 'signatureData'], (result) => {
+    browser.storage.local.get(['username', 'password', 'signatureData']).then((result) => {
       if (!result.username || !result.password) {
         updateStatusBar('Sauvegardez vos identifiants d\'abord');
         appendExecutionLog('Pointage', 'Tentative de lancement sans identifiants', 'error');
@@ -503,16 +510,9 @@ document.addEventListener('DOMContentLoaded', () => {
       appendExecutionLog('Pointage', 'Demarrage du pointage', 'info');
 
       // Envoyer le message au background.js pour démarrer le processus
-      chrome.runtime.sendMessage({ action: 'lancerPointage' }, (response) => {
+      browser.runtime.sendMessage({ action: 'lancerPointage' }).then((response) => {
         // Réactiver le bouton
         setStartButtonIdle();
-
-        if (chrome.runtime.lastError) {
-          updateStatusBar('Erreur de communication avec le service worker');
-          appendExecutionLog('Pointage', 'Erreur de communication avec le service worker', 'error');
-          console.error('Erreur:', chrome.runtime.lastError);
-          return;
-        }
 
         // Afficher un popup à chaque pointage si l'extension n'est pas à jour
         if (response && response.outdated) {
@@ -525,15 +525,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (response && response.success) {
-          const lastAction = `${response.message} — ${formatDateHeure()}`;
-          statusBarText.textContent = lastAction;
-          chrome.storage.local.set({ lastAction: lastAction });
+          const lastActionText = `${response.message} — ${formatDateHeure()}`;
+          statusBarText.textContent = lastActionText;
+          browser.storage.local.set({ lastAction: lastActionText });
           appendExecutionLog('Pointage', response.message, 'success');
         } else if (response && response.error) {
           updateStatusBar(response.error);
           appendExecutionLog('Pointage', response.error, 'error');
         }
+      }).catch((error) => {
+        // Réactiver le bouton
+        setStartButtonIdle();
+        updateStatusBar('Erreur de communication avec le service worker');
+        appendExecutionLog('Pointage', 'Erreur de communication avec le service worker', 'error');
+        console.error('Erreur:', error);
       });
+    }).catch((error) => {
+      console.error('Erreur lecture storage:', error);
     });
   });
 });

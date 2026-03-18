@@ -1,6 +1,7 @@
 // =============================================
-// Pointage Auto — Service Worker (background.js)
+// Pointage Auto — Background Script (background.js)
 // Orchestre les étapes du pointage automatisé
+// Compatible Firefox (WebExtension API)
 // =============================================
 
 // --- Constantes ---
@@ -38,7 +39,7 @@ const SITE_SELECTORS = {
  * @param {string} message
  * @param {'info'|'success'|'error'} level
  */
-function appendExecutionLog(tag, message, level = 'info') {
+async function appendExecutionLog(tag, message, level = 'info') {
   const entry = {
     id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     ts: new Date().toISOString(),
@@ -48,11 +49,14 @@ function appendExecutionLog(tag, message, level = 'info') {
     level
   };
 
-  chrome.storage.local.get([EXECUTION_LOG_KEY], (result) => {
+  try {
+    const result = await browser.storage.local.get([EXECUTION_LOG_KEY]);
     const logs = Array.isArray(result[EXECUTION_LOG_KEY]) ? result[EXECUTION_LOG_KEY] : [];
     logs.unshift(entry);
-    chrome.storage.local.set({ [EXECUTION_LOG_KEY]: logs.slice(0, MAX_EXECUTION_LOGS) });
-  });
+    await browser.storage.local.set({ [EXECUTION_LOG_KEY]: logs.slice(0, MAX_EXECUTION_LOGS) });
+  } catch (e) {
+    console.error('Erreur appendExecutionLog:', e);
+  }
 }
 
 /**
@@ -197,7 +201,8 @@ async function getDerniereVersionGithub() {
  * @returns {Promise<{outdated:boolean,currentVersion:string,latestVersion:string|null,latestUrl:string|null}>}
  */
 async function verifierMiseAJour() {
-  const currentVersion = chrome.runtime.getManifest().version;
+  const manifest = browser.runtime.getManifest();
+  const currentVersion = manifest.version;
   log('Mise à jour', `Début check version (repo=${GITHUB_REPO}, locale=${currentVersion})`);
 
   const latestInfo = await getDerniereVersionGithub();
@@ -230,7 +235,7 @@ async function verifierMiseAJour() {
 // =============================================
 
 /**
- * Affiche une notification Chrome
+ * Affiche une notification Firefox
  * @param {string} titre - Titre de la notification
  * @param {string} message - Corps de la notification
  * @param {{id?: string, dedupeMs?: number}} options
@@ -255,15 +260,13 @@ function afficherNotification(titre, message, options = {}) {
     ts: now
   };
 
-  chrome.notifications.create(id, {
+  browser.notifications.create(id, {
     type: 'basic',
     iconUrl: 'icons/icon128.png',
     title: titre,
     message: message
-  }, (notificationId) => {
-    if (chrome.runtime.lastError) {
-      console.warn('Notification échouée:', chrome.runtime.lastError.message);
-    }
+  }).catch((error) => {
+    console.warn('Notification échouée:', error);
   });
 }
 
@@ -276,20 +279,20 @@ function afficherNotification(titre, message, options = {}) {
 function attendreChargementOnglet(tabId, timeout = TIMEOUT_CHARGEMENT) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
-      chrome.tabs.onUpdated.removeListener(listener);
+      browser.tabs.onUpdated.removeListener(listener);
       reject(new Error('Timeout : la page n\'a pas fini de charger'));
     }, timeout);
 
     function listener(updatedTabId, changeInfo) {
       if (updatedTabId === tabId && changeInfo.status === 'complete') {
         clearTimeout(timer);
-        chrome.tabs.onUpdated.removeListener(listener);
+        browser.tabs.onUpdated.removeListener(listener);
         // Petit délai supplémentaire pour que le DOM soit bien prêt
         setTimeout(resolve, 500);
       }
     }
 
-    chrome.tabs.onUpdated.addListener(listener);
+    browser.tabs.onUpdated.addListener(listener);
   });
 }
 
@@ -303,7 +306,7 @@ function attendreChargementOnglet(tabId, timeout = TIMEOUT_CHARGEMENT) {
 function attendreRedirection(tabId, urlActuelle, timeout = TIMEOUT_REDIRECTION) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
-      chrome.tabs.onUpdated.removeListener(listener);
+      browser.tabs.onUpdated.removeListener(listener);
       reject(new Error('Connexion échouée, vérifiez vos identifiants'));
     }, timeout);
 
@@ -312,14 +315,14 @@ function attendreRedirection(tabId, urlActuelle, timeout = TIMEOUT_REDIRECTION) 
         // Vérifier que l'URL a changé (n'est plus la page de connexion)
         if (tab.url && !tab.url.includes('/connexion')) {
           clearTimeout(timer);
-          chrome.tabs.onUpdated.removeListener(listener);
+          browser.tabs.onUpdated.removeListener(listener);
           // Délai pour que le DOM de la nouvelle page soit prêt
           setTimeout(() => resolve(tab.url), 500);
         }
       }
     }
 
-    chrome.tabs.onUpdated.addListener(listener);
+    browser.tabs.onUpdated.addListener(listener);
   });
 }
 
@@ -368,17 +371,14 @@ async function lancerSignatureViaContentScript(tabId, updateInfo) {
 
   log('Pointage', `Payload lancerSignature: ${JSON.stringify(payload)}`);
 
-  return new Promise((resolve) => {
-    chrome.tabs.sendMessage(tabId, payload, (response) => {
-      if (chrome.runtime.lastError) {
-        log('Pointage', `Erreur sendMessage: ${chrome.runtime.lastError.message}`);
-        resolve({ success: false, error: chrome.runtime.lastError.message });
-      } else {
-        log('Pointage', `Réponse du content script: ${JSON.stringify(response)}`);
-        resolve(response || { success: false, error: 'Aucune réponse du content script' });
-      }
-    });
-  });
+  try {
+    const response = await browser.tabs.sendMessage(tabId, payload);
+    log('Pointage', `Réponse du content script: ${JSON.stringify(response)}`);
+    return response || { success: false, error: 'Aucune réponse du content script' };
+  } catch (error) {
+    log('Pointage', `Erreur sendMessage: ${error.message}`);
+    return { success: false, error: error.message };
+  }
 }
 
 /**
@@ -392,23 +392,15 @@ async function afficherAlerteMiseAJourDansPage(tabId, updateInfo) {
   }
 
   try {
-    await new Promise((resolve) => {
-      chrome.tabs.sendMessage(tabId, {
-        action: 'afficherAlerteMiseAJour',
-        currentVersion: updateInfo.currentVersion,
-        latestVersion: updateInfo.latestVersion,
-        latestUrl: updateInfo.latestUrl
-      }, () => {
-        if (chrome.runtime.lastError) {
-          log('Mise à jour', `Impossible d'afficher la modale en page: ${chrome.runtime.lastError.message}`, 'error');
-        } else {
-          log('Mise à jour', 'Modale de mise à jour affichée dans la page');
-        }
-        resolve();
-      });
+    await browser.tabs.sendMessage(tabId, {
+      action: 'afficherAlerteMiseAJour',
+      currentVersion: updateInfo.currentVersion,
+      latestVersion: updateInfo.latestVersion,
+      latestUrl: updateInfo.latestUrl
     });
-  } catch (e) {
-    log('Mise à jour', `Erreur lors de l'affichage de la modale en page: ${e.message}`, 'error');
+    log('Mise à jour', 'Modale de mise à jour affichée dans la page');
+  } catch (error) {
+    log('Mise à jour', `Impossible d'afficher la modale en page: ${error.message}`, 'error');
   }
 }
 
@@ -424,27 +416,18 @@ async function confirmerSignatureSiVersionObsolete(tabId, updateInfo) {
   }
 
   try {
-    const response = await new Promise((resolve) => {
-      chrome.tabs.sendMessage(tabId, {
-        action: 'confirmerSignatureVersionObsolete',
-        currentVersion: updateInfo.currentVersion,
-        latestVersion: updateInfo.latestVersion,
-        latestUrl: updateInfo.latestUrl
-      }, (res) => {
-        if (chrome.runtime.lastError) {
-          log('Mise à jour', `Impossible d'ouvrir la confirmation en page: ${chrome.runtime.lastError.message}`, 'error');
-          resolve({ success: false, confirmed: false });
-          return;
-        }
-        resolve(res || { success: false, confirmed: false });
-      });
+    const response = await browser.tabs.sendMessage(tabId, {
+      action: 'confirmerSignatureVersionObsolete',
+      currentVersion: updateInfo.currentVersion,
+      latestVersion: updateInfo.latestVersion,
+      latestUrl: updateInfo.latestUrl
     });
 
     const confirmed = !!(response && response.success && response.confirmed);
     log('Mise à jour', `Confirmation utilisateur avant signature: ${confirmed ? 'CONTINUER' : 'ANNULER'}`);
     return confirmed;
-  } catch (e) {
-    log('Mise à jour', `Erreur confirmation avant signature: ${e.message}`, 'error');
+  } catch (error) {
+    log('Mise à jour', `Impossible d'ouvrir la confirmation en page: ${error.message}`, 'error');
     return false;
   }
 }
@@ -460,13 +443,8 @@ async function attendrePingContentScript(tabId, timeout = 6000) {
   while (Date.now() - startedAt < timeout) {
     await new Promise((r) => setTimeout(r, 300));
     try {
-      const ok = await new Promise((resolve) => {
-        chrome.tabs.sendMessage(tabId, { action: 'ping' }, (res) => {
-          if (chrome.runtime.lastError) resolve(false);
-          else resolve(!!(res && res.success));
-        });
-      });
-      if (ok) return true;
+      const ok = await browser.tabs.sendMessage(tabId, { action: 'ping' });
+      if (ok && ok.success) return true;
     } catch (_) {
       // pas encore prêt
     }
@@ -476,7 +454,7 @@ async function attendrePingContentScript(tabId, timeout = 6000) {
 }
 
 /**
- * Exécute un script dans un onglet via chrome.scripting.executeScript
+ * Exécute un script dans un onglet via browser.scripting.executeScript
  * @param {number} tabId - ID de l'onglet
  * @param {Function} func - Fonction à exécuter
  * @param {Array} args - Arguments à passer à la fonction
@@ -484,18 +462,18 @@ async function attendrePingContentScript(tabId, timeout = 6000) {
  */
 async function executerScript(tabId, func, args = []) {
   try {
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: tabId },
-      func: func,
-      args: args
+    // Firefox: utiliser tabs.executeScript pour injecter et exécuter
+    // d'abord on injecte le script si nécessaire, puis on exécute la fonction
+    const results = await browser.tabs.executeScript(tabId, {
+      code: `(${func.toString()})(...${JSON.stringify(args)})`
     });
     if (results && results[0]) {
-      return results[0].result;
+      return results[0];
     }
     return null;
-  } catch (erreur) {
-    console.error('Erreur d\'exécution de script:', erreur);
-    throw new Error(`Erreur d'injection de script : ${erreur.message}`);
+  } catch (error) {
+    console.error('Erreur d\'exécution de script:', error);
+    throw new Error(`Erreur d'injection de script : ${error.message}`);
   }
 }
 
@@ -515,7 +493,7 @@ async function executerScript(tabId, func, args = []) {
 async function verifierSiDejaConnecte(tabId) {
   // Vérification 1 : l'URL a-t-elle déjà changé immédiatement ?
   try {
-    const tab = await chrome.tabs.get(tabId);
+    const tab = await browser.tabs.get(tabId);
     log('Session', `URL actuelle: ${tab.url}`);
     if (!tab.url.includes('/connexion')) {
       log('Session', `Redirection immédiate détectée vers: ${tab.url}`);
@@ -537,7 +515,7 @@ async function verifierSiDejaConnecte(tabId) {
 
     // Vérifier si l'URL a changé (redirection serveur différée)
     try {
-      const tabActuelle = await chrome.tabs.get(tabId);
+      const tabActuelle = await browser.tabs.get(tabId);
       if (!tabActuelle.url.includes('/connexion')) {
         log('Session', `Tentative ${i + 1}/${MAX_TENTATIVES} — redirection détectée vers: ${tabActuelle.url}`);
         return true;
@@ -577,19 +555,19 @@ async function verifierSiDejaConnecte(tabId) {
 async function etape1_ouvrirPageConnexion() {
   try {
     log('Étape 1', `Création onglet vers ${URL_CONNEXION}...`);
-    const tab = await chrome.tabs.create({ url: URL_CONNEXION, active: true });
+    const tab = await browser.tabs.create({ url: URL_CONNEXION, active: true });
     log('Étape 1', `Onglet créé (tabId=${tab.id}), attente du chargement complet (timeout ${TIMEOUT_CHARGEMENT}ms)...`);
     await attendreChargementOnglet(tab.id);
     log('Étape 1', 'Page de connexion chargée');
     return tab.id;
-  } catch (erreur) {
-    throw new Error(`Étape 1 — Impossible d'ouvrir la page : ${erreur.message}`);
+  } catch (error) {
+    throw new Error(`Étape 1 — Impossible d'ouvrir la page : ${error.message}`);
   }
 }
 
 /**
  * ÉTAPE 2 — Remplir les champs et soumettre le formulaire de connexion
- * Fonction exécutée DANS l'onglet via chrome.scripting.executeScript
+ * Fonction exécutée DANS l'onglet via executeScript
  * @param {string} username - Identifiant
  * @param {string} password - Mot de passe
  * @returns {boolean} true si le formulaire a été soumis
@@ -633,8 +611,8 @@ function scriptRemplirFormulaire(username, password) {
     boutonConnexion.click();
 
     return true;
-  } catch (erreur) {
-    return { error: erreur.message };
+  } catch (error) {
+    return { error: error.message };
   }
 }
 
@@ -653,8 +631,8 @@ async function etape2_remplirFormulaire(tabId, username, password) {
       throw new Error(resultat.error);
     }
     log('Étape 2', 'Formulaire rempli et soumis avec succès');
-  } catch (erreur) {
-    throw new Error(`Étape 2 — Échec du remplissage : ${erreur.message}`);
+  } catch (error) {
+    throw new Error(`Étape 2 — Échec du remplissage : ${error.message}`);
   }
 }
 
@@ -668,8 +646,8 @@ async function etape3_attendreRedirection(tabId) {
     const nouvelleUrl = await attendreRedirection(tabId, URL_CONNEXION);
     log('Étape 3', `Redirection réussie vers: ${nouvelleUrl}`);
     return nouvelleUrl;
-  } catch (erreur) {
-    throw new Error(`Étape 3 — ${erreur.message}`);
+  } catch (error) {
+    throw new Error(`Étape 3 — ${error.message}`);
   }
 }
 
@@ -686,7 +664,7 @@ async function lancerPointage() {
   let tabId = null;
   let updateInfo = {
     outdated: false,
-    currentVersion: chrome.runtime.getManifest().version,
+    currentVersion: browser.runtime.getManifest().version,
     latestVersion: null,
     latestUrl: null
   };
@@ -698,7 +676,7 @@ async function lancerPointage() {
     log('Pointage', `Pré-étape: résultat mise à jour -> outdated=${updateInfo.outdated}, locale=${updateInfo.currentVersion}, distante=${updateInfo.latestVersion || 'n/a'}`);
 
     // Récupérer les identifiants depuis le stockage
-    const data = await chrome.storage.local.get(['username', 'password', 'signatureData']);
+    const data = await browser.storage.local.get(['username', 'password', 'signatureData']);
 
     if (!data.username || !data.password) {
       throw new Error('Identifiants non configurés');
@@ -717,7 +695,9 @@ async function lancerPointage() {
       const continuer = await confirmerSignatureSiVersionObsolete(tabId, updateInfo);
       if (!continuer) {
         log('Pointage', "Processus annulé par l'utilisateur (version non à jour)", 'error');
-        try { chrome.tabs.remove(tabId); } catch (_) { }
+        try { 
+          await browser.tabs.remove(tabId);
+        } catch (_) { }
         return {
           success: false,
           error: "Signature annulée : version de l'extension non à jour",
@@ -794,14 +774,14 @@ async function lancerPointage() {
       latestUrl: updateInfo.latestUrl
     };
 
-  } catch (erreur) {
-    log('Pointage', `ERREUR FATALE: ${erreur.message}`, 'error');
-    console.error('[Pointage] Stack:', erreur.stack);
-    afficherNotification('❌ Pointage Auto — Erreur', erreur.message);
+  } catch (error) {
+    log('Pointage', `ERREUR FATALE: ${error.message}`, 'error');
+    console.error('[Pointage] Stack:', error.stack);
+    afficherNotification('❌ Pointage Auto — Erreur', error.message);
 
     return {
       success: false,
-      error: erreur.message,
+      error: error.message,
       outdated: updateInfo.outdated,
       currentVersion: updateInfo.currentVersion,
       latestVersion: updateInfo.latestVersion,
@@ -814,13 +794,13 @@ async function lancerPointage() {
 // ÉCOUTEUR DE MESSAGES
 // =============================================
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'lancerPointage') {
     // Exécuter le pointage de manière asynchrone et répondre au popup
     lancerPointage().then((resultat) => {
       sendResponse(resultat);
-    }).catch((erreur) => {
-      sendResponse({ success: false, error: erreur.message });
+    }).catch((error) => {
+      sendResponse({ success: false, error: error.message });
     });
 
     // Retourner true pour indiquer qu'on enverra la réponse de manière asynchrone
