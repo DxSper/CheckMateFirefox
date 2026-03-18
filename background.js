@@ -462,15 +462,14 @@ async function attendrePingContentScript(tabId, timeout = 6000) {
  */
 async function executerScript(tabId, func, args = []) {
   try {
-    // Vérifier que l'API est disponible
-    if (typeof browser.tabs.executeScript !== 'function') {
-      throw new Error(`browser.tabs.executeScript n'est pas une fonction (type: ${typeof browser.tabs.executeScript})`);
-    }
-    
-    const code = `(${func.toString()})(...${JSON.stringify(args)})`;
-    const results = await browser.tabs.executeScript(tabId, { code });
+    // Firefox MV3: utiliser browser.scripting.executeScript (API Chrome-compatible)
+    const results = await browser.scripting.executeScript({
+      target: { tabId: tabId },
+      func: func,
+      args: args
+    });
     if (results && results[0]) {
-      return results[0];
+      return results[0].result;
     }
     return null;
   } catch (error) {

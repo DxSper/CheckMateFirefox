@@ -7,7 +7,8 @@
     "storage",
     "activeTab",
     "notifications",
-    "tabs"
+    "tabs",
+    "scripting"
   ],
   "host_permissions": [
     "https://cesar.emineo-informatique.fr/*",
