@@ -462,7 +462,11 @@ async function attendrePingContentScript(tabId, timeout = 6000) {
  */
 async function executerScript(tabId, func, args = []) {
   try {
-    // Firefox: utiliser tabs.executeScript pour injecter du code
+    // Vérifier que l'API est disponible
+    if (typeof browser.tabs.executeScript !== 'function') {
+      throw new Error(`browser.tabs.executeScript n'est pas une fonction (type: ${typeof browser.tabs.executeScript})`);
+    }
+    
     const code = `(${func.toString()})(...${JSON.stringify(args)})`;
     const results = await browser.tabs.executeScript(tabId, { code });
     if (results && results[0]) {
