@@ -49,6 +49,21 @@ body {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes stepAppear {
+  from { opacity: 0; transform: scale(0.7); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes canvasPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 148, 58, 0); }
+  50% { box-shadow: 0 0 0 4px rgba(212, 148, 58, 0.15); }
+}
+
 .header  { animation: fadeSlideIn 0.4s var(--ease-out-quart) both; }
 .hero    { animation: fadeSlideIn 0.4s var(--ease-out-quart) 0.1s both; }
 .log-panel { animation: fadeSlideIn 0.4s var(--ease-out-quart) 0.18s both; }
@@ -58,9 +73,9 @@ body {
 .header {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 12px;
   padding: 4px 0;
-  position: relative;
 }
 
 .logo {
@@ -89,25 +104,7 @@ body {
 
 .brand-block { flex: 1; }
 
-.compact-toggle {
-  position: absolute;
-  right: 0;
-  width: 36px;
-  height: 36px;
-  border-radius: 7px;
-  background: var(--bg-surface);
-  color: var(--text-muted);
-  border: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: color 0.2s var(--ease-out-quart), background 0.2s var(--ease-out-quart);
-}
-
-.compact-toggle:hover { color: var(--text-primary); }
-.compact-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.compact-toggle[aria-pressed="true"] { color: var(--accent); }
+.compact-toggle { display: none; } /* kept for JS reference compat */
 
 /* ---- Hero ---- */
 .hero {
@@ -331,6 +328,11 @@ body {
 .canvas-placeholder.hidden { opacity: 0; }
 .canvas-placeholder svg { opacity: 0.35; }
 
+/* Canvas pulse animation for onboarding attention */
+.onboarding-active .canvas-wrapper {
+  animation: canvasPulse 2.4s ease-in-out 0.6s 2;
+}
+
 /* ---- Buttons ---- */
 .btn {
   display: inline-flex;
@@ -443,18 +445,44 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  animation: fadeSlideIn 0.35s var(--ease-out-quart);
+  animation: slideUpFade 0.4s var(--ease-out-quart);
 }
 
 .onboarding-banner.hidden { display: none; }
 
-.onboarding-banner-title { font-size: 12px; font-weight: 700; color: var(--text-primary); }
-.onboarding-banner-sub { font-size: 11px; color: var(--text-secondary); line-height: 1.4; }
+.onboarding-banner-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  animation: fadeSlideIn 0.3s var(--ease-out-quart) 0.1s both;
+}
+
+.onboarding-banner-sub {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  animation: fadeSlideIn 0.3s var(--ease-out-quart) 0.18s both;
+}
 
 /* Step indicators */
-.onboarding-steps { display: flex; align-items: center; gap: 6px; padding-top: 4px; }
+.onboarding-steps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 4px;
+  animation: fadeSlideIn 0.3s var(--ease-out-quart) 0.25s both;
+}
 
-.onboarding-step { display: flex; align-items: center; gap: 5px; }
+.onboarding-step {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  animation: stepAppear 0.3s var(--ease-out-quart) both;
+}
+
+.onboarding-step:nth-child(1) { animation-delay: 0.3s; }
+.onboarding-step:nth-child(3) { animation-delay: 0.42s; }
+.onboarding-step:nth-child(5) { animation-delay: 0.54s; }
 
 .step-num {
   width: 22px;
@@ -597,17 +625,71 @@ body {
 .modal-btn:active { transform: translateY(0) scale(0.97); }
 .modal-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* ---- Compact mode ---- */
-body.compact .container { gap: 10px; padding: 14px; }
-body.compact .logo { width: 28px; height: 28px; }
+/* ---- Settings toggle (inside config panel) ---- */
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  margin: 0;
+}
+
+.settings-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* Toggle switch */
+.toggle-switch {
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  background: var(--border);
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s var(--ease-out-quart);
+  flex-shrink: 0;
+  /* Thumb */
+}
+
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  transition: transform 0.2s var(--ease-out-quart), background 0.2s var(--ease-out-quart);
+}
+
+.toggle-switch[aria-checked="true"] {
+  background: var(--accent);
+}
+
+.toggle-switch[aria-checked="true"]::after {
+  transform: translateX(18px);
+  background: var(--on-accent);
+}
+
+.toggle-switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+body.compact .logo { width: 30px; height: 30px; }
 body.compact .title { font-size: 18px; }
-body.compact .btn-start { padding: 11px 14px; font-size: 14px; }
-body.compact .btn-report-bug { padding: 6px 10px; font-size: 10px; }
+body.compact .btn-start { padding: 12px 14px; font-size: 13px; }
+body.compact .btn-report-bug { padding: 6px 12px; font-size: 10px; }
 body.compact .status-bar { font-size: 10px; }
-body.compact .execution-log-list { max-height: 86px; }
-body.compact .config-toggle { padding: 10px 12px; }
-body.compact .input-wrapper input { padding: 8px 10px 8px 30px; font-size: 12px; min-height: 40px; }
+body.compact .execution-log-list { max-height: 80px; }
+body.compact .config-toggle { padding: 10px 12px; font-size: 12px; }
+body.compact .input-wrapper input { padding: 9px 10px 9px 30px; font-size: 12px; min-height: 40px; }
 body.compact .canvas-wrapper { height: 110px; }
+body.compact .settings-row { padding: 6px 14px; }
+body.compact .settings-label { font-size: 11px; }
 
 /* ---- Mobile adaptation: Firefox for Android ---- */
 /* Below 380px the viewport is very constrained — compact defaults apply */

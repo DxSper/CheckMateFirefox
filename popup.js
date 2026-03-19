@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   function setCompactMode(enabled, persist = true) {
     body.classList.toggle('compact', enabled);
-    btnCompact.setAttribute('aria-pressed', String(enabled));
+    btnCompact.setAttribute('aria-checked', String(enabled));
     if (persist) {
       browser.storage.local.set({ uiCompactMode: enabled });
     }
@@ -234,7 +234,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function showOnboardingBanner() {
     if (!onboardingBanner) return;
     onboardingBanner.classList.remove('hidden');
+    body.classList.add('onboarding-active');
     updateOnboardingStep(null);
+  }
+
+  function hideOnboardingBanner() {
+    if (!onboardingBanner) return;
+    onboardingBanner.classList.add('hidden');
+    body.classList.remove('onboarding-active');
   }
 
   /**
