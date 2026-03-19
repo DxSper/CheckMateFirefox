@@ -6,7 +6,7 @@
     <title>CheckMate</title>
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
@@ -48,37 +48,16 @@
           </svg>
           <span id="config-status-text">Non configuré</span>
         </div>
-
-        <div id="status-bar" class="status-bar">
-          <svg class="status-bar-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12 6 12 12 16 14"/>
-          </svg>
-          <span id="status-bar-text">Aucune action effectuée</span>
-        </div>
-
-        <button id="btn-report-bug" class="btn btn-report-bug" type="button">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M8 2h8"/>
-            <path d="M9 2v2.5"/>
-            <path d="M15 2v2.5"/>
-            <rect x="5" y="5" width="14" height="14" rx="3"/>
-            <circle cx="9" cy="10" r="1"/>
-            <circle cx="15" cy="10" r="1"/>
-            <path d="M9 15h6"/>
-          </svg>
-          <span>Signaler un bug</span>
-        </button>
       </section>
 
       <!-- Journal -->
-      <section class="log-panel">
-        <div class="log-panel-header">
-          <h2 class="log-title">Journal d'exécution</h2>
-          <button id="btn-clear-logs" class="log-clear" type="button">Vider</button>
-        </div>
+      <details class="log-panel">
+        <summary class="log-panel-header">
+          <h2 class="log-title">Journal</h2>
+          <button id="btn-clear-logs" class="log-clear" type="button" onclick="event.preventDefault(); event.stopPropagation();">Vider</button>
+        </summary>
         <ul id="execution-log-list" class="execution-log-list"></ul>
-      </section>
+      </details>
 
       <!-- Configuration -->
       <details id="config-panel" class="config-panel">
@@ -95,24 +74,7 @@
 
         <!-- Onboarding -->
         <div id="onboarding-banner" class="onboarding-banner" aria-live="polite">
-          <p class="onboarding-banner-title">Premiere configuration</p>
-          <p class="onboarding-banner-sub">Un clic = presence pointee. Nous avons besoin de 3 choses.</p>
-          <div class="onboarding-steps" aria-label="Etapes de configuration">
-            <div class="onboarding-step" data-step="1">
-              <span class="step-num">1</span>
-              <span class="step-label">Identifiants</span>
-            </div>
-            <div class="step-connector" aria-hidden="true"></div>
-            <div class="onboarding-step" data-step="2">
-              <span class="step-num">2</span>
-              <span class="step-label">Signature</span>
-            </div>
-            <div class="step-connector" aria-hidden="true"></div>
-            <div class="onboarding-step" data-step="3">
-              <span class="step-num">3</span>
-              <span class="step-label">Sauvegarder</span>
-            </div>
-          </div>
+          <p class="onboarding-banner-sub">Identifiants + signature requis pour pointer.</p>
         </div>
 
         <!-- Identifiants -->
@@ -125,7 +87,6 @@
             </svg>
             <input type="text" id="username" placeholder="Votre identifiant" autocomplete="username"/>
           </div>
-          <p class="field-hint">Identifiant de connexion CESAR</p>
         </div>
 
         <div class="field-group">
@@ -136,7 +97,6 @@
             </svg>
             <input type="password" id="password" placeholder="Votre mot de passe" autocomplete="current-password"/>
           </div>
-          <p class="field-hint">Mot de passe CESAR — stocke uniquement en local</p>
         </div>
 
         <!-- Signature -->
@@ -169,8 +129,19 @@
       </details>
 
       <footer class="footer-credit">
-        Fork de
-        <a href="https://github.com/MattiaParrinello" target="_blank" rel="noopener noreferrer" class="author-link">MattiaParrinello/CheckMate</a>
+        <a href="https://github.com/MattiaParrinello" target="_blank" rel="noopener noreferrer" class="author-link">Fork de MattiaParrinello</a>
+        <span class="footer-sep">·</span>
+        <button id="btn-report-bug" class="footer-bug-link" type="button" title="Signaler un bug">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 2h8"/>
+            <path d="M9 2v2.5"/>
+            <path d="M15 2v2.5"/>
+            <rect x="5" y="5" width="14" height="14" rx="3"/>
+            <circle cx="9" cy="10" r="1"/>
+            <circle cx="15" cy="10" r="1"/>
+            <path d="M9 15h6"/>
+          </svg>
+        </button>
       </footer>
     </div>
 

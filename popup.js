@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const configStatusText = document.getElementById('config-status-text');
   const statusIconWarn = document.getElementById('status-icon-warn');
   const statusIconOk = document.getElementById('status-icon-ok');
-  const statusBarText = document.getElementById('status-bar-text');
   const executionLogList = document.getElementById('execution-log-list');
   const configPanel = document.getElementById('config-panel');
   const updateModal = document.getElementById('update-modal');
@@ -34,8 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Onboarding references ---
   const onboardingBanner = document.getElementById('onboarding-banner');
-  const stepElements = document.querySelectorAll('.onboarding-step');
-  const stepConnectors = document.querySelectorAll('.step-connector');
 
   // --- État du dessin ---
   let isDrawing = false;
@@ -45,13 +42,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // =============================================
   // UTILITAIRE — Formatage date/heure
   // =============================================
-
-  function formatDateHeure() {
-    const now = new Date();
-    const date = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const heure = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    return `${date} à ${heure}`;
-  }
 
   /**
    * Formate un timestamp ISO en heure locale courte
@@ -179,72 +169,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // =============================================
 
   /**
-   * Met a jour les indicateurs d'etape (1/2/3) en fonction de l'etat des champs
-   * @param {'username'|'password'|'signature'|'save'} completedStep
-   */
-  function updateOnboardingStep(completedStep) {
-    if (!onboardingBanner || onboardingBanner.classList.contains('hidden')) return;
-
-    const steps = Array.from(stepElements);
-    let activeIndex = 0;
-
-    if (completedStep === 'username' || completedStep === 'password') {
-      activeIndex = 0; // step 1 (identifiants)
-    } else if (completedStep === 'signature') {
-      activeIndex = 1; // step 2 (signature)
-    } else if (completedStep === 'save') {
-      activeIndex = 2; // step 3 (sauvegarder) - done
-    }
-
-    steps.forEach((el, i) => {
-      el.classList.remove('active', 'done');
-      if (i < activeIndex) {
-        el.classList.add('done');
-        el.querySelector('.step-num').innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-      } else if (i === activeIndex) {
-        el.classList.add('active');
-        el.querySelector('.step-num').textContent = i + 1;
-      } else {
-        el.querySelector('.step-num').textContent = i + 1;
-      }
-    });
-
-    stepConnectors.forEach((conn, i) => {
-      conn.classList.toggle('active', i < activeIndex);
-    });
-  }
-
-  /**
    * Affiche la banniere d'onboarding (premiere utilisation)
    */
   function showOnboardingBanner() {
     if (!onboardingBanner) return;
     onboardingBanner.classList.remove('hidden');
     body.classList.add('onboarding-active');
-    updateOnboardingStep(null);
   }
 
   function hideOnboardingBanner() {
     if (!onboardingBanner) return;
     onboardingBanner.classList.add('hidden');
     body.classList.remove('onboarding-active');
-  }
-
-  /**
-   * Cache la banniere d'onboarding (appelee apres la premiere sauvegarde reussie)
-   */
-  function hideOnboardingBannerAfterSave() {
-    if (!onboardingBanner) return;
-    onboardingBanner.classList.add('hidden');
-  }
-
-  /**
-   * Reinitialise les icones des etapes (checkmarks -> nombres)
-   */
-  function resetStepIcons() {
-    stepElements.forEach((el, i) => {
-      el.querySelector('.step-num').textContent = i + 1;
-    });
   }
 
   // =============================================
@@ -364,7 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   function updateConfigStatus(isConfigured) {
     if (isConfigured) {
-      configStatusText.textContent = 'Configuration sauvegardée';
+      configStatusText.textContent = 'Configuré';
       configStatus.className = 'config-status configured';
       statusIconWarn.style.display = 'none';
       statusIconOk.style.display = '';
@@ -381,19 +317,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * Met à jour la barre de statut avec un message et la date/heure
-   */
-  function updateStatusBar(message) {
-    statusBarText.textContent = `${message} — ${formatDateHeure()}`;
-  }
-
-  /**
    * Charge les données sauvegardées depuis browser.storage.local
    * et pré-remplit les champs du popup
    */
   async function loadSavedData() {
     try {
-      const result = await browser.storage.local.get(['username', 'password', 'signatureData', 'lastAction', EXECUTION_LOG_KEY]);
+      const result = await browser.storage.local.get(['username', 'password', 'signatureData', EXECUTION_LOG_KEY]);
       
       // Pré-remplir l'identifiant
       if (result.username) {
@@ -419,14 +348,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (isConfigured) {
         hideOnboardingBanner();
-        resetStepIcons();
       } else {
         showOnboardingBanner();
-      }
-
-      // Afficher la dernière action si présente
-      if (result.lastAction) {
-        statusBarText.textContent = result.lastAction;
       }
 
       // Initialiser le journal
@@ -448,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // =============================================
-  // ONBOARDING — Mise a jour des etapes en temps reel
+  // BOUTON REPORT BUG
   // =============================================
 
   function handleFieldChange() {
@@ -506,7 +429,6 @@ document.addEventListener('DOMContentLoaded', () => {
   btnClearLogs.addEventListener('click', async () => {
     await browser.storage.local.set({ [EXECUTION_LOG_KEY]: [] });
     renderExecutionLogs([]);
-    updateStatusBar('Journal vide');
   });
 
   if (updateModalClose) {
@@ -541,38 +463,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Validation des champs
     if (!username) {
-      updateStatusBar('Veuillez saisir un identifiant');
       appendExecutionLog('Configuration', 'Identifiant manquant', 'error');
       return;
     }
     if (!password) {
-      updateStatusBar('Veuillez saisir un mot de passe');
       appendExecutionLog('Configuration', 'Mot de passe manquant', 'error');
       return;
     }
     if (signatureData.length === 0) {
-      updateStatusBar('Veuillez dessiner votre signature');
       appendExecutionLog('Configuration', 'Signature manquante', 'error');
       return;
     }
 
     // Sauvegarde dans browser.storage.local
-    const lastAction = `Configuration sauvegardée — ${formatDateHeure()}`;
-
     try {
       await browser.storage.local.set({
         username: username,
         password: password,
-        signatureData: signatureData,
-        lastAction: lastAction
+        signatureData: signatureData
       });
       updateConfigStatus(true);
       hideOnboardingBanner();
-      resetStepIcons();
-      statusBarText.textContent = lastAction;
       appendExecutionLog('Configuration', 'Configuration sauvegardee', 'success');
     } catch (e) {
-      updateStatusBar('Erreur lors de la sauvegarde');
       appendExecutionLog('Configuration', 'Erreur lors de la sauvegarde', 'error');
       console.error('Erreur de sauvegarde:', e);
     }
@@ -586,19 +499,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Vérifier que la configuration est complète avant de lancer
     browser.storage.local.get(['username', 'password', 'signatureData']).then((result) => {
       if (!result.username || !result.password) {
-        updateStatusBar('Sauvegardez vos identifiants d\'abord');
         appendExecutionLog('Pointage', 'Tentative de lancement sans identifiants', 'error');
         return;
       }
       if (!result.signatureData || result.signatureData.length === 0) {
-        updateStatusBar('Sauvegardez votre signature d\'abord');
         appendExecutionLog('Pointage', 'Tentative de lancement sans signature', 'error');
         return;
       }
 
       // Désactiver le bouton pendant l'exécution
       setStartButtonLoading();
-      updateStatusBar('Lancement du pointage...');
       appendExecutionLog('Pointage', 'Demarrage du pointage', 'info');
 
       // Envoyer le message au background.js pour démarrer le processus
@@ -617,18 +527,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (response && response.success) {
-          const lastActionText = `${response.message} — ${formatDateHeure()}`;
-          statusBarText.textContent = lastActionText;
-          browser.storage.local.set({ lastAction: lastActionText });
           appendExecutionLog('Pointage', response.message, 'success');
         } else if (response && response.error) {
-          updateStatusBar(response.error);
           appendExecutionLog('Pointage', response.error, 'error');
         }
       }).catch((error) => {
         // Réactiver le bouton
         setStartButtonIdle();
-        updateStatusBar('Erreur de communication avec le service worker');
         appendExecutionLog('Pointage', 'Erreur de communication avec le service worker', 'error');
         console.error('Erreur:', error);
       });
