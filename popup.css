@@ -490,6 +490,9 @@ body {
   border-radius: 3px;
   transition: color 0.2s var(--ease-out-quart), background 0.2s var(--ease-out-quart);
   opacity: 0.4;
+  width: auto;
+  min-height: 0;
+  font-size: 0;
 }
 
 .footer-bug-link:hover {
