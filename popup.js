@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnSave = document.getElementById('btn-save');
   const btnStart = document.getElementById('btn-start');
   const btnReportBug = document.getElementById('btn-report-bug');
-  const btnCompact = document.getElementById('btn-compact');
   const btnClearLogs = document.getElementById('btn-clear-logs');
   const configStatus = document.getElementById('config-status');
   const configStatusText = document.getElementById('config-status-text');
@@ -84,19 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
     btnStart.disabled = true;
     btnStart.classList.add('loading');
     btnStart.innerHTML = '<svg class="btn-icon spinner" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg><span>Pointage en cours...</span>';
-  }
-
-  /**
-   * Active ou désactive le thème compact
-   * @param {boolean} enabled
-   * @param {boolean} persist
-   */
-  function setCompactMode(enabled, persist = true) {
-    body.classList.toggle('compact', enabled);
-    btnCompact.setAttribute('aria-checked', String(enabled));
-    if (persist) {
-      browser.storage.local.set({ uiCompactMode: enabled });
-    }
   }
 
   /**
@@ -407,7 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   async function loadSavedData() {
     try {
-      const result = await browser.storage.local.get(['username', 'password', 'signatureData', 'lastAction', EXECUTION_LOG_KEY, 'uiCompactMode']);
+      const result = await browser.storage.local.get(['username', 'password', 'signatureData', 'lastAction', EXECUTION_LOG_KEY]);
       
       // Pré-remplir l'identifiant
       if (result.username) {
@@ -445,9 +431,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Initialiser le journal
       renderExecutionLogs(result[EXECUTION_LOG_KEY]);
-
-      // Restaurer le thème compact
-      setCompactMode(!!result.uiCompactMode, false);
     } catch (e) {
       console.error('Erreur loadSavedData:', e);
     }
@@ -456,22 +439,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Charger les données au démarrage du popup
   loadSavedData();
 
-  // Mettre à jour le journal et le mode compact en temps réel
+  // Mettre à jour le journal en temps réel
   browser.storage.onChanged.addListener((changes, areaName) => {
     if (areaName !== 'local') return;
-
     if (changes[EXECUTION_LOG_KEY]) {
       renderExecutionLogs(changes[EXECUTION_LOG_KEY].newValue);
     }
-
-    if (changes.uiCompactMode) {
-      setCompactMode(!!changes.uiCompactMode.newValue, false);
-    }
-  });
-
-  btnCompact.addEventListener('click', () => {
-    const isCompact = body.classList.contains('compact');
-    setCompactMode(!isCompact, true);
   });
 
   // =============================================

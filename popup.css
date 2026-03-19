@@ -104,8 +104,6 @@ body {
 
 .brand-block { flex: 1; }
 
-.compact-toggle { display: none; } /* kept for JS reference compat */
-
 /* ---- Hero ---- */
 .hero {
   display: flex;
@@ -130,20 +128,19 @@ body {
 
 .config-status .status-icon { flex-shrink: 0; }
 .status-icon#status-icon-ok { display: none; }
-
 .config-status.configured .status-icon#status-icon-warn { display: none; }
 .config-status.configured .status-icon#status-icon-ok { display: block; }
 
 .config-status.configured {
-  background: rgba(52, 211, 153, 0.1);
+  background: var(--success-dim);
   color: var(--success);
-  border: 1px solid rgba(52, 211, 153, 0.2);
+  border: 1px solid rgba(93, 184, 146, 0.2);
 }
 
 .config-status.not-configured {
   background: var(--accent-dim);
   color: var(--accent);
-  border: 1px solid rgba(251, 191, 36, 0.2);
+  border: 1px solid rgba(212, 148, 58, 0.2);
 }
 
 .status-bar {
@@ -328,7 +325,7 @@ body {
 .canvas-placeholder.hidden { opacity: 0; }
 .canvas-placeholder svg { opacity: 0.35; }
 
-/* Canvas pulse animation for onboarding attention */
+/* Canvas pulse when onboarding is active */
 .onboarding-active .canvas-wrapper {
   animation: canvasPulse 2.4s ease-in-out 0.6s 2;
 }
@@ -624,72 +621,6 @@ body {
 .modal-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
 .modal-btn:active { transform: translateY(0) scale(0.97); }
 .modal-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-/* ---- Settings toggle (inside config panel) ---- */
-.settings-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 14px;
-  margin: 0;
-}
-
-.settings-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-/* Toggle switch */
-.toggle-switch {
-  width: 40px;
-  height: 22px;
-  border-radius: 11px;
-  background: var(--border);
-  border: none;
-  cursor: pointer;
-  position: relative;
-  transition: background 0.2s var(--ease-out-quart);
-  flex-shrink: 0;
-  /* Thumb */
-}
-
-.toggle-switch::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--text-secondary);
-  transition: transform 0.2s var(--ease-out-quart), background 0.2s var(--ease-out-quart);
-}
-
-.toggle-switch[aria-checked="true"] {
-  background: var(--accent);
-}
-
-.toggle-switch[aria-checked="true"]::after {
-  transform: translateX(18px);
-  background: var(--on-accent);
-}
-
-.toggle-switch:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-body.compact .logo { width: 30px; height: 30px; }
-body.compact .title { font-size: 18px; }
-body.compact .btn-start { padding: 12px 14px; font-size: 13px; }
-body.compact .btn-report-bug { padding: 6px 12px; font-size: 10px; }
-body.compact .status-bar { font-size: 10px; }
-body.compact .execution-log-list { max-height: 80px; }
-body.compact .config-toggle { padding: 10px 12px; font-size: 12px; }
-body.compact .input-wrapper input { padding: 9px 10px 9px 30px; font-size: 12px; min-height: 40px; }
-body.compact .canvas-wrapper { height: 110px; }
-body.compact .settings-row { padding: 6px 14px; }
-body.compact .settings-label { font-size: 11px; }
 
 /* ---- Reduced motion ---- */
 @media (prefers-reduced-motion: reduce) {
