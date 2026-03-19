@@ -118,7 +118,7 @@ Avant le premier pointage, vous devez configurer vos identifiants et votre signa
 
 ### 1. Dérouler le panneau de configuration
 
-Cliquez sur **« Configuration »** en bas du popup pour afficher les champs.
+Cliquez sur **« Configuration »** dans le popup pour afficher les champs.
 
 ---
 
@@ -156,7 +156,7 @@ Une fois configurée, l'utilisation se résume à **un seul clic**.
 
 ### Suivi en temps réel
 
-Le **journal d'exécution** dans le popup affiche chaque étape horodatée : ouverture de la page, connexion, recherche du bouton, replay de la signature, confirmation. En cas d'échec, le message d'erreur y apparaît pour faciliter le diagnostic.
+Le **journal d'exécution** (pliable) affiche chaque étape horodatée : ouverture de la page, connexion, recherche du bouton, replay de la signature, confirmation. En cas d'échec, le message d'erreur y apparaît pour faciliter le diagnostic.
 
 ---
 
