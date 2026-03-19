@@ -233,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
   /**
    * Cache la banniere d'onboarding (appelee apres la premiere sauvegarde reussie)
    */
-  function hideOnboardingBanner() {
+  function hideOnboardingBannerAfterSave() {
     if (!onboardingBanner) return;
     onboardingBanner.classList.add('hidden');
   }
