@@ -219,6 +219,37 @@
           </svg>
         </summary>
 
+        <!-- Bannière d'onboarding -->
+        <div id="onboarding-banner" class="onboarding-banner" aria-live="polite">
+          <div class="onboarding-banner-icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+          </div>
+          <div class="onboarding-banner-content">
+            <p class="onboarding-banner-title">Premiere configuration</p>
+            <p class="onboarding-banner-sub">Un clic = presence pointee. Nous avons besoin de 3 choses.</p>
+          </div>
+          <div class="onboarding-steps" aria-label="Etapes de configuration">
+            <div class="onboarding-step" data-step="1">
+              <span class="step-num">1</span>
+              <span class="step-label">Identifiants</span>
+            </div>
+            <div class="step-connector" aria-hidden="true"></div>
+            <div class="onboarding-step" data-step="2">
+              <span class="step-num">2</span>
+              <span class="step-label">Signature</span>
+            </div>
+            <div class="step-connector" aria-hidden="true"></div>
+            <div class="onboarding-step" data-step="3">
+              <span class="step-num">3</span>
+              <span class="step-label">Sauvegarder</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Identifiants -->
         <section class="section">
           <h2 class="section-title">
@@ -261,6 +292,7 @@
                 autocomplete="username"
               />
             </div>
+            <p class="field-hint">Identifiant de connexion CESAR</p>
           </div>
           <div class="field-group">
             <label for="password">Mot de passe</label>
@@ -287,6 +319,7 @@
                 autocomplete="current-password"
               />
             </div>
+            <p class="field-hint">Mot de passe CESAR — stocke uniquement en local</p>
           </div>
         </section>
 
@@ -307,6 +340,7 @@
             </svg>
             Signature
           </h2>
+          <p class="field-hint field-hint-block">Dessinez votre signature telle que vous la tracez sur papier. Elle sera reproduite automatiquement sur CESAR.</p>
           <div class="canvas-wrapper">
             <canvas id="signature-canvas" width="320" height="150"></canvas>
             <div id="canvas-placeholder" class="canvas-placeholder">

@@ -33,6 +33,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const updateModalConfirm = document.getElementById('update-modal-confirm');
   const updateModalMessage = document.getElementById('update-modal-message');
 
+  // --- Onboarding references ---
+  const onboardingBanner = document.getElementById('onboarding-banner');
+  const stepElements = document.querySelectorAll('.onboarding-step');
+  const stepConnectors = document.querySelectorAll('.step-connector');
+
   // --- État du dessin ---
   let isDrawing = false;
   let signatureData = []; // Tableau de coordonnées [{x, y, type}]
@@ -180,6 +185,72 @@ document.addEventListener('DOMContentLoaded', () => {
       item.appendChild(line);
       item.appendChild(message);
       executionLogList.appendChild(item);
+    });
+  }
+
+  // =============================================
+  // ONBOARDING — Step indicators et banner
+  // =============================================
+
+  /**
+   * Met a jour les indicateurs d'etape (1/2/3) en fonction de l'etat des champs
+   * @param {'username'|'password'|'signature'|'save'} completedStep
+   */
+  function updateOnboardingStep(completedStep) {
+    if (!onboardingBanner || onboardingBanner.classList.contains('hidden')) return;
+
+    const steps = Array.from(stepElements);
+    let activeIndex = 0;
+
+    if (completedStep === 'username' || completedStep === 'password') {
+      activeIndex = 0; // step 1 (identifiants)
+    } else if (completedStep === 'signature') {
+      activeIndex = 1; // step 2 (signature)
+    } else if (completedStep === 'save') {
+      activeIndex = 2; // step 3 (sauvegarder) - done
+    }
+
+    steps.forEach((el, i) => {
+      el.classList.remove('active', 'done');
+      if (i < activeIndex) {
+        el.classList.add('done');
+        el.querySelector('.step-num').innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      } else if (i === activeIndex) {
+        el.classList.add('active');
+        el.querySelector('.step-num').textContent = i + 1;
+      } else {
+        el.querySelector('.step-num').textContent = i + 1;
+      }
+    });
+
+    stepConnectors.forEach((conn, i) => {
+      conn.classList.toggle('active', i < activeIndex);
+    });
+  }
+
+  /**
+   * Affiche la banniere d'onboarding (premiere utilisation)
+   */
+  function showOnboardingBanner() {
+    if (!onboardingBanner) return;
+    onboardingBanner.classList.remove('hidden');
+    updateOnboardingStep(null);
+  }
+
+  /**
+   * Cache la banniere d'onboarding (appelee apres la premiere sauvegarde reussie)
+   */
+  function hideOnboardingBanner() {
+    if (!onboardingBanner) return;
+    onboardingBanner.classList.add('hidden');
+  }
+
+  /**
+   * Reinitialise les icones des etapes (checkmarks -> nombres)
+   */
+  function resetStepIcons() {
+    stepElements.forEach((el, i) => {
+      el.querySelector('.step-num').textContent = i + 1;
     });
   }
 
@@ -353,6 +424,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const isConfigured = !!(result.username && result.password && result.signatureData && result.signatureData.length > 0);
       updateConfigStatus(isConfigured);
 
+      if (isConfigured) {
+        hideOnboardingBanner();
+        resetStepIcons();
+      } else {
+        showOnboardingBanner();
+      }
+
       // Afficher la dernière action si présente
       if (result.lastAction) {
         statusBarText.textContent = result.lastAction;
@@ -387,6 +465,38 @@ document.addEventListener('DOMContentLoaded', () => {
   btnCompact.addEventListener('click', () => {
     const isCompact = body.classList.contains('compact');
     setCompactMode(!isCompact, true);
+  });
+
+  // =============================================
+  // ONBOARDING — Mise a jour des etapes en temps reel
+  // =============================================
+
+  function handleFieldChange() {
+    const hasUsername = usernameInput.value.trim().length > 0;
+    const hasPassword = passwordInput.value.length > 0;
+    const hasSig = signatureData.length > 0;
+
+    if (hasSig) {
+      updateOnboardingStep('signature');
+    } else if (hasUsername && hasPassword) {
+      updateOnboardingStep('password');
+    } else if (hasUsername || hasPassword) {
+      updateOnboardingStep('username');
+    } else {
+      updateOnboardingStep(null);
+    }
+  }
+
+  usernameInput.addEventListener('input', handleFieldChange);
+  passwordInput.addEventListener('input', handleFieldChange);
+
+  // Canvas mouse events for signature step
+  canvas.addEventListener('mousedown', () => {
+    setTimeout(handleFieldChange, 50);
+  });
+
+  btnClear.addEventListener('click', () => {
+    setTimeout(handleFieldChange, 50);
   });
 
   if (btnReportBug) {
@@ -477,6 +587,8 @@ document.addEventListener('DOMContentLoaded', () => {
         lastAction: lastAction
       });
       updateConfigStatus(true);
+      hideOnboardingBanner();
+      resetStepIcons();
       statusBarText.textContent = lastAction;
       appendExecutionLog('Configuration', 'Configuration sauvegardee', 'success');
     } catch (e) {
