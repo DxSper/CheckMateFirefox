@@ -28,7 +28,8 @@
 }
 
 body {
-  width: min(380px, 100vw);
+  width: 380px;
+  min-height: 100vh;
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
   background: var(--bg-base);
   color: var(--text-primary);
