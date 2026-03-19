@@ -150,6 +150,10 @@ body {
   flex-shrink: 0;
 }
 
+.status-icon#status-icon-ok {
+  display: none;
+}
+
 .config-status.configured {
   background: rgba(52, 211, 153, 0.1);
   color: #34d399;
@@ -488,6 +492,10 @@ body {
 
 .canvas-placeholder.hidden {
   opacity: 0;
+}
+
+.canvas-placeholder svg.placeholder-icon {
+  opacity: 0.4;
 }
 
 /* ---- Buttons ---- */

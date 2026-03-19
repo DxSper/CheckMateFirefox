@@ -127,7 +127,6 @@
             stroke-width="2"
             stroke-linecap="round"
             stroke-linejoin="round"
-            style="display: none"
           >
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
             <polyline points="22 4 12 14.01 9 11.01" />
@@ -178,7 +177,7 @@
 
       <section class="log-panel">
         <div class="log-panel-header">
-          <h2 class="log-title">Journal d'execution</h2>
+          <h2 class="log-title">Journal d'exécution</h2>
           <button id="btn-clear-logs" class="log-clear" type="button">
             Vider
           </button>
@@ -259,7 +258,7 @@
                 type="text"
                 id="username"
                 placeholder="Votre identifiant"
-                autocomplete="off"
+                autocomplete="username"
               />
             </div>
           </div>
@@ -320,7 +319,7 @@
                 stroke-width="1.5"
                 stroke-linecap="round"
                 stroke-linejoin="round"
-                style="opacity: 0.4"
+                class="placeholder-icon"
               >
                 <path
                   d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"
@@ -421,7 +420,7 @@
         </div>
 
         <h2 id="update-modal-title" class="modal-title">
-          Mise a jour disponible
+          Mise à jour disponible
         </h2>
         <p id="update-modal-message" class="modal-message"></p>
 
