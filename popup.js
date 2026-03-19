@@ -129,10 +129,6 @@ document.addEventListener('DOMContentLoaded', () => {
     executionLogList.textContent = '';
 
     if (!Array.isArray(logs) || logs.length === 0) {
-      const emptyItem = document.createElement('li');
-      emptyItem.className = 'empty';
-      emptyItem.textContent = 'Aucune execution recente';
-      executionLogList.appendChild(emptyItem);
       return;
     }
 
